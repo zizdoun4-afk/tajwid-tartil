@@ -103,7 +103,7 @@ fun SurahListScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Sourates (${uiState.surahs.size})",
+                        text = String.format(strings.tabSurahsFormat, uiState.surahs.size),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = if (!uiState.isShowingBookmarks) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -132,7 +132,7 @@ fun SurahListScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Favoris (${uiState.bookmarks.size})",
+                        text = String.format(strings.tabBookmarksFormat, uiState.bookmarks.size),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = if (uiState.isShowingBookmarks) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
@@ -196,7 +196,7 @@ fun SurahListScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Aucun verset mis en favori pour le moment.\nAjoutez des favoris depuis le lecteur d'Ayat !",
+                            text = if (uiState.searchQuery.isBlank()) strings.noBookmarksFound else String.format(strings.noSurahFound, uiState.searchQuery),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
@@ -273,6 +273,7 @@ fun BookmarkCardItem(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -299,7 +300,7 @@ fun BookmarkCardItem(
                     color = MaterialTheme.colorScheme.primaryContainer
                 ) {
                     Text(
-                        text = "📌 ${bookmark.surahName} — Verset ${bookmark.ayahNumber}",
+                        text = String.format(strings.bookmarkAyahHeaderFormat, bookmark.surahName, bookmark.ayahNumber),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -310,7 +311,7 @@ fun BookmarkCardItem(
                 IconButton(onClick = onDelete) {
                     Icon(
                         imageVector = Icons.Default.BookmarkRemove,
-                        contentDescription = "Supprimer des favoris",
+                        contentDescription = strings.removeBookmark,
                         tint = MaterialTheme.colorScheme.error
                     )
                 }

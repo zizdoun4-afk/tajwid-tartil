@@ -23,6 +23,11 @@ interface AppStrings {
     val revelationMedinan: String
     val noSurahFound: String
     val loadingSurahs: String
+    val tabSurahsFormat: String
+    val tabBookmarksFormat: String
+    val bookmarkAyahHeaderFormat: String
+    val removeBookmark: String
+    val noBookmarksFound: String
 
     // Ayah Reader Screen
     val loadingAyahs: String
@@ -118,6 +123,11 @@ object ArabicAppStrings : AppStrings {
     override val revelationMedinan = "مدنية"
     override val noSurahFound = "لم يتم العثور على سورة لـ \"%s\""
     override val loadingSurahs = "جاري تحميل السور..."
+    override val tabSurahsFormat = "السور (%d)"
+    override val tabBookmarksFormat = "المفضلة (%d)"
+    override val bookmarkAyahHeaderFormat = "📌 سورة %s — الآية %d"
+    override val removeBookmark = "حذف من المفضلة"
+    override val noBookmarksFound = "لا توجد آيات مضافة للمفضلة حالياً"
 
     override val loadingAyahs = "جاري تحميل الآيات..."
     override val ayahHeaderFormat = "سورة %s — الآية %d/%d"
@@ -207,6 +217,11 @@ object FrenchAppStrings : AppStrings {
     override val revelationMedinan = "Médinoise"
     override val noSurahFound = "Aucune sourate trouvée pour \"%s\""
     override val loadingSurahs = "Chargement des sourates..."
+    override val tabSurahsFormat = "Sourates (%d)"
+    override val tabBookmarksFormat = "Favoris (%d)"
+    override val bookmarkAyahHeaderFormat = "📌 %s — Verset %d"
+    override val removeBookmark = "Supprimer des favoris"
+    override val noBookmarksFound = "Aucun verset mis en favori"
 
     override val loadingAyahs = "Chargement des versets..."
     override val ayahHeaderFormat = "Sourate %s — Verset %d/%d"
