@@ -44,6 +44,17 @@
 
 ---
 
+## 📸 Captures d'écran / Screenshots / صور التطبيق
+
+<p align="center">
+  <img src="screenshots/screen1_surah_list.jpg" width="220" alt="Écran Principal - Liste des Sourates"/>
+  <img src="screenshots/screen2_ayah_reader.jpg" width="220" alt="Lecteur d'Ayah & Tajwid"/>
+  <img src="screenshots/screen3_favorites.jpg" width="220" alt="Favoris & Marque-pages"/>
+  <img src="screenshots/screen4_recordings.jpg" width="220" alt="Bibliothèque des Enregistrements"/>
+</p>
+
+---
+
 ## 📱 Google Play Store Description (Fiche de présentation Play Store)
 
 Vous trouverez ci-dessous les textes prêts à être copiés-collés dans **Google Play Console** pour la publication de l'application :
