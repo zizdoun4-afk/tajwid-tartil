@@ -1,0 +1,6 @@
+{
+  "name": "Tajwid & Tartil",
+  "description": "Coran Trainer - Auto-entraînement à la récitation coranique avec comparaison audio verset par verset.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
