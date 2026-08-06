@@ -300,8 +300,8 @@ fun AyahReaderScreen(
 
                             // Compact Tikrar (تكرار) Button Chip (🔁 تكرار 1x, 3x, 5x, ∞)
                             val repeatLabel = when (uiState.repeatCount) {
-                                -1 -> "🔁 تكرار ∞"
-                                else -> "🔁 تكرار ${uiState.repeatCount}x"
+                                -1 -> "🔁 ∞"
+                                else -> "🔁 ${uiState.repeatCount}x"
                             }
                             StyleChip(
                                 label = repeatLabel,
@@ -660,7 +660,7 @@ fun StyleChip(
             style = MaterialTheme.typography.labelLarge,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
         )
     }
 }

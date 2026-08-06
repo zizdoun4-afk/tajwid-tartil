@@ -137,8 +137,8 @@ object ArabicAppStrings : AppStrings {
 
     override val loadingAyahs = "جاري تحميل الآيات..."
     override val ayahHeaderFormat = "سورة %s — الآية %d/%d"
-    override val styleTartilLabel = "ترتيل ▶"
-    override val styleTajwidLabel = "تجويد ▶"
+    override val styleTartilLabel = "ترتيل"
+    override val styleTajwidLabel = "تجويد"
     override val referenceAudioTitleFormat = "النموذج الصوتي (%s)"
     override val referencePlaying = "جاري التشغيل..."
     override val referenceSubtitle = "استمع إلى نموذج التلاوة الصحيحة"
@@ -234,8 +234,8 @@ object FrenchAppStrings : AppStrings {
 
     override val loadingAyahs = "Chargement des versets..."
     override val ayahHeaderFormat = "Sourate %s — Verset %d/%d"
-    override val styleTartilLabel = "Tartil ▶"
-    override val styleTajwidLabel = "Tajwid ▶"
+    override val styleTartilLabel = "Tartil"
+    override val styleTajwidLabel = "Tajwid"
     override val referenceAudioTitleFormat = "Référence (%s)"
     override val referencePlaying = "Lecture en cours..."
     override val referenceSubtitle = "Écouter le modèle de récitation"
