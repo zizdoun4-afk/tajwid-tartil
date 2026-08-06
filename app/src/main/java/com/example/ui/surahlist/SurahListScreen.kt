@@ -149,7 +149,7 @@ fun SurahListScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 4.dp)
                 .testTag("surah_search_input"),
-            placeholder = { Text(if (uiState.isShowingBookmarks) "Rechercher dans les favoris..." else strings.surahSearchPlaceholder) },
+            placeholder = { Text(if (uiState.isShowingBookmarks) strings.bookmarkSearchPlaceholder else strings.surahSearchPlaceholder) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,

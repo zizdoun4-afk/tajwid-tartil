@@ -29,11 +29,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -568,6 +576,10 @@ fun AyahReaderScreen(
         val secs = elapsedSecs % 60
         val durationStr = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
 
+        var tfValue by remember(uiState.reciterNameInput) {
+            mutableStateOf(TextFieldValue(text = uiState.reciterNameInput))
+        }
+
         AlertDialog(
             onDismissRequest = { viewModel.dismissMetadataDialog() },
             title = {
@@ -580,11 +592,21 @@ fun AyahReaderScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
-                        value = uiState.reciterNameInput,
-                        onValueChange = { viewModel.onReciterNameChanged(it) },
+                        value = tfValue,
+                        onValueChange = {
+                            tfValue = it
+                            viewModel.onReciterNameChanged(it.text)
+                        },
                         label = { Text(strings.reciterNameLabel) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testTag("reciter_name_input"),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    tfValue = tfValue.copy(selection = TextRange(0, tfValue.text.length))
+                                }
+                            }
+                            .testTag("reciter_name_input"),
                         shape = RoundedCornerShape(12.dp)
                     )
 

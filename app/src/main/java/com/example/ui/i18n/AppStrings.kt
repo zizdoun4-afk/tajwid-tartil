@@ -23,6 +23,9 @@ interface AppStrings {
     val revelationMedinan: String
     val noSurahFound: String
     val loadingSurahs: String
+    val bookmarkSearchPlaceholder: String
+    val fiSabilAllahTitle: String
+    val fiSabilAllahSubtitle: String
     val tabSurahsFormat: String
     val tabBookmarksFormat: String
     val bookmarkAyahHeaderFormat: String
@@ -123,6 +126,9 @@ object ArabicAppStrings : AppStrings {
     override val revelationMedinan = "مدنية"
     override val noSurahFound = "لم يتم العثور على سورة لـ \"%s\""
     override val loadingSurahs = "جاري تحميل السور..."
+    override val bookmarkSearchPlaceholder = "ابحث في المفضلة (باسم السورة أو رقمها)..."
+    override val fiSabilAllahTitle = "في سبيل الله"
+    override val fiSabilAllahSubtitle = "🤲 هذا العمل لوجه الله تعالى — في سبيل الله"
     override val tabSurahsFormat = "السور (%d)"
     override val tabBookmarksFormat = "المفضلة (%d)"
     override val bookmarkAyahHeaderFormat = "📌 سورة %s — الآية %d"
@@ -217,6 +223,9 @@ object FrenchAppStrings : AppStrings {
     override val revelationMedinan = "Médinoise"
     override val noSurahFound = "Aucune sourate trouvée pour \"%s\""
     override val loadingSurahs = "Chargement des sourates..."
+    override val bookmarkSearchPlaceholder = "Rechercher dans les favoris (nom ou numéro)..."
+    override val fiSabilAllahTitle = "Pour l'amour d'Allah (Fi Sabil Allah)"
+    override val fiSabilAllahSubtitle = "🤲 Œuvre dédiée en vue d'Allah — Fi Sabil Allah"
     override val tabSurahsFormat = "Sourates (%d)"
     override val tabBookmarksFormat = "Favoris (%d)"
     override val bookmarkAyahHeaderFormat = "📌 %s — Verset %d"
