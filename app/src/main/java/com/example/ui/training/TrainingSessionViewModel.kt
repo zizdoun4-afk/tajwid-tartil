@@ -52,7 +52,8 @@ data class TrainingSessionUiState(
 class TrainingSessionViewModel(
     application: Application,
     val surahNumber: Int,
-    val ayahNumber: Int
+    val ayahNumber: Int,
+    val initialStep: TrainingStep = TrainingStep.LISTEN_3X
 ) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getInstance(application)
@@ -67,7 +68,12 @@ class TrainingSessionViewModel(
 
     private var tempRecordingDurationMs: Long = 0L
 
-    private val _uiState = MutableStateFlow(TrainingSessionUiState())
+    private val _uiState = MutableStateFlow(
+        TrainingSessionUiState(
+            currentStep = initialStep,
+            isTextRevealed = initialStep != TrainingStep.BLIND_TEST
+        )
+    )
     val uiState: StateFlow<TrainingSessionUiState> = _uiState.asStateFlow()
 
     init {

@@ -44,6 +44,22 @@ class FakeMemorizationDao : MemorizationDao {
         return flowOf(store.values.filter { it.status == MemorizationStatus.REVIEW.name })
     }
 
+    override fun getInLearningStatus(): Flow<List<MemorizationStatusEntity>> {
+        return flowOf(store.values.filter { it.status == MemorizationStatus.LEARNING.name })
+    }
+
+    override fun getMemorizedStatus(): Flow<List<MemorizationStatusEntity>> {
+        return flowOf(store.values.filter { it.status == MemorizationStatus.MEMORIZED.name })
+    }
+
+    override fun getReviewedSinceCountFlow(sinceMillis: Long): Flow<Int> {
+        return flowOf(store.values.count { (it.lastReviewedAtEpochMillis ?: 0L) >= sinceMillis })
+    }
+
+    override suspend fun getReviewedSinceCount(sinceMillis: Long): Int {
+        return store.values.count { (it.lastReviewedAtEpochMillis ?: 0L) >= sinceMillis }
+    }
+
     override fun getAllStatusesFlow(): Flow<List<MemorizationStatusEntity>> {
         return flowOf(store.values.toList())
     }
@@ -129,5 +145,34 @@ class MemorizationRepositoryTest {
         // Subsequent review maintains MEMORIZED status
         val afterReview = repository.markReviewed(1, 1)
         assertEquals(MemorizationStatus.MEMORIZED.name, afterReview.status)
+    }
+
+    @Test
+    fun `test daily reviewed count accurately reflects stored timestamps`() = runTest {
+        val now = System.currentTimeMillis()
+        val startOfToday = now - 1000L // 1 second ago
+
+        // Initially zero
+        assertEquals(0, repository.getReviewedSinceCount(startOfToday))
+
+        // Mark 2 ayahs reviewed
+        repository.markReviewed(1, 1)
+        repository.markReviewed(1, 2)
+
+        assertEquals(2, repository.getReviewedSinceCount(startOfToday))
+
+        // An older review from 2 days ago
+        val twoDaysAgo = now - (2L * 24 * 60 * 60 * 1000)
+        fakeDao.store["1:3"] = MemorizationStatusEntity(
+            surahNumber = 1,
+            ayahNumber = 3,
+            status = MemorizationStatus.REVIEW.name,
+            lastReviewedAtEpochMillis = twoDaysAgo
+        )
+
+        // Today's count is still 2
+        assertEquals(2, repository.getReviewedSinceCount(startOfToday))
+        // Since 3 days ago is 3
+        assertEquals(3, repository.getReviewedSinceCount(twoDaysAgo - 1000L))
     }
 }

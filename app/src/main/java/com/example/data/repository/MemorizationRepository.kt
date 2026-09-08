@@ -125,6 +125,22 @@ class MemorizationRepository(
         return memorizationDao.getInReviewStatus()
     }
 
+    fun getInLearningStatus(): Flow<List<MemorizationStatusEntity>> {
+        return memorizationDao.getInLearningStatus()
+    }
+
+    fun getMemorizedStatus(): Flow<List<MemorizationStatusEntity>> {
+        return memorizationDao.getMemorizedStatus()
+    }
+
+    fun getReviewedSinceCountFlow(sinceMillis: Long): Flow<Int> {
+        return memorizationDao.getReviewedSinceCountFlow(sinceMillis)
+    }
+
+    suspend fun getReviewedSinceCount(sinceMillis: Long): Int = withContext(Dispatchers.IO) {
+        memorizationDao.getReviewedSinceCount(sinceMillis)
+    }
+
     fun getAllStatusesFlow(): Flow<List<MemorizationStatusEntity>> {
         return memorizationDao.getAllStatusesFlow()
     }

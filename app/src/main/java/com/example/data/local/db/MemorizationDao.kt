@@ -30,6 +30,18 @@ interface MemorizationDao {
     @Query("SELECT * FROM memorization_status WHERE status = 'REVIEW' ORDER BY surahNumber ASC, ayahNumber ASC")
     fun getInReviewStatus(): Flow<List<MemorizationStatusEntity>>
 
+    @Query("SELECT * FROM memorization_status WHERE status = 'LEARNING' ORDER BY surahNumber ASC, ayahNumber ASC")
+    fun getInLearningStatus(): Flow<List<MemorizationStatusEntity>>
+
+    @Query("SELECT * FROM memorization_status WHERE status = 'MEMORIZED' ORDER BY surahNumber ASC, ayahNumber ASC")
+    fun getMemorizedStatus(): Flow<List<MemorizationStatusEntity>>
+
+    @Query("SELECT COUNT(*) FROM memorization_status WHERE lastReviewedAtEpochMillis >= :sinceMillis")
+    fun getReviewedSinceCountFlow(sinceMillis: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM memorization_status WHERE lastReviewedAtEpochMillis >= :sinceMillis")
+    suspend fun getReviewedSinceCount(sinceMillis: Long): Int
+
     @Query("SELECT * FROM memorization_status WHERE lastReviewedAtEpochMillis >= :sinceMillis")
     suspend fun getWeeklyStats(sinceMillis: Long): List<MemorizationStatusEntity>
 

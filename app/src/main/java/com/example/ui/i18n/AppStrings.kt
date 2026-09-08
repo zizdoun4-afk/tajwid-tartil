@@ -251,6 +251,33 @@ interface AppStrings {
     val compareHeaderTitle: String
     val activeSourceModel: String
     val activeSourceUser: String
+
+    // Phase 3: Smart Hifz Dashboard & Actions & Plans
+    val hifzActionNew: String
+    val hifzActionNewDesc: String
+    val hifzActionReview: String
+    val hifzActionReviewDesc: String
+    val hifzActionTest: String
+    val hifzActionTestDesc: String
+    val hifzJourneyTitle: String
+    val hifzJourneyStarted: String
+    val hifzJourneyLearning: String
+    val hifzJourneyReviewing: String
+    val hifzJourneyMemorized: String
+    val hifzPlanTitle: String
+    val hifzPlanTodayProgressFormat: String
+    val hifzPlanTargetFormat: String
+    val hifzPlanTarget1: String
+    val hifzPlanTarget3: String
+    val hifzPlanTarget5: String
+    val hifzPlanTargetCustom: String
+    val hifzPlanSetCustomTitle: String
+    val hifzReminderSettingsTitle: String
+    val hifzReminderToggle: String
+    val hifzReminderTimePrompt: String
+    val hifzDueBadgeToday: String
+    val hifzDueBadgeDaysFormat: String
+    val hifzDueBadgeOverdueFormat: String
 }
 
 object ArabicAppStrings : AppStrings {
@@ -488,6 +515,32 @@ object ArabicAppStrings : AppStrings {
     override val compareHeaderTitle = "مقارنة التلاوة مع القارئ المرجعي"
     override val activeSourceModel = "النموذج المرجعي"
     override val activeSourceUser = "تلاوتي المسجلة"
+
+    override val hifzActionNew = "حفظ جديد"
+    override val hifzActionNewDesc = "بدء حفظ آيات جديدة في رحلتك"
+    override val hifzActionReview = "مراجعة دورية"
+    override val hifzActionReviewDesc = "تكرار متباعد للآيات المستحقة اليوم"
+    override val hifzActionTest = "اختبار الغيب"
+    override val hifzActionTestDesc = "اختبار التسميع غيباً دون النظر"
+    override val hifzJourneyTitle = "مسار الحفظ والمراجعة"
+    override val hifzJourneyStarted = "تم البدء"
+    override val hifzJourneyLearning = "قيد التعلم"
+    override val hifzJourneyReviewing = "قيد المراجعة"
+    override val hifzJourneyMemorized = "تم الحفظ"
+    override val hifzPlanTitle = "الخطة اليومية للحفظ"
+    override val hifzPlanTodayProgressFormat = "%d من %d آيات مكتملة اليوم"
+    override val hifzPlanTargetFormat = "الهدف: %d آيات / يوم"
+    override val hifzPlanTarget1 = "آية واحدة / يوم"
+    override val hifzPlanTarget3 = "3 آيات / يوم"
+    override val hifzPlanTarget5 = "5 آيات / يوم"
+    override val hifzPlanTargetCustom = "خطة مخصصة"
+    override val hifzPlanSetCustomTitle = "تحديد الهدف اليومي"
+    override val hifzReminderSettingsTitle = "تذكير الحفظ والمراجعة"
+    override val hifzReminderToggle = "تفعيل التذكير اليومي"
+    override val hifzReminderTimePrompt = "وقت التذكير اليومي"
+    override val hifzDueBadgeToday = "مستحق اليوم"
+    override val hifzDueBadgeDaysFormat = "خلال %d أيام"
+    override val hifzDueBadgeOverdueFormat = "متأخر %d يوم"
 }
 
 object FrenchAppStrings : AppStrings {
@@ -725,6 +778,32 @@ object FrenchAppStrings : AppStrings {
     override val compareHeaderTitle = "Comparaison avec le récitateur référent"
     override val activeSourceModel = "Récitateur référent"
     override val activeSourceUser = "Ma récitation"
+
+    override val hifzActionNew = "Nouveau"
+    override val hifzActionNewDesc = "Apprendre de nouveaux versets"
+    override val hifzActionReview = "Réviser"
+    override val hifzActionReviewDesc = "Répétition espacée des versets dus"
+    override val hifzActionTest = "Tester"
+    override val hifzActionTestDesc = "Tester la mémorisation sans regarder"
+    override val hifzJourneyTitle = "Parcours de mémorisation"
+    override val hifzJourneyStarted = "Commencés"
+    override val hifzJourneyLearning = "En apprentissage"
+    override val hifzJourneyReviewing = "En révision"
+    override val hifzJourneyMemorized = "Mémorisés"
+    override val hifzPlanTitle = "Plan quotidien"
+    override val hifzPlanTodayProgressFormat = "%d / %d versets travaillés aujourd'hui"
+    override val hifzPlanTargetFormat = "Objectif : %d versets / jour"
+    override val hifzPlanTarget1 = "1 verset / jour"
+    override val hifzPlanTarget3 = "3 versets / jour"
+    override val hifzPlanTarget5 = "5 versets / jour"
+    override val hifzPlanTargetCustom = "Personnalisé"
+    override val hifzPlanSetCustomTitle = "Définir l'objectif quotidien"
+    override val hifzReminderSettingsTitle = "Rappels de mémorisation"
+    override val hifzReminderToggle = "Activer le rappel quotidien"
+    override val hifzReminderTimePrompt = "Heure du rappel"
+    override val hifzDueBadgeToday = "Aujourd'hui"
+    override val hifzDueBadgeDaysFormat = "Dans %d j"
+    override val hifzDueBadgeOverdueFormat = "En retard de %d j"
 }
 
 fun getAppStrings(language: AppLanguage): AppStrings {

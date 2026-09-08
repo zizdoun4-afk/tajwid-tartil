@@ -10,6 +10,7 @@ import com.example.domain.model.RecitationStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 
@@ -25,6 +26,26 @@ class UserPreferencesRepository(private val context: Context) {
         val BOOKMARKS = stringSetPreferencesKey("bookmarked_ayahs")
         val LAST_SURAH = intPreferencesKey("last_read_surah")
         val LAST_AYAH_INDEX = intPreferencesKey("last_read_ayah_index")
+        val DAILY_MEMORIZATION_TARGET = intPreferencesKey("daily_memorization_target")
+        val HIFZ_REMINDER_ENABLED = booleanPreferencesKey("hifz_reminder_enabled")
+        val HIFZ_REMINDER_HOUR = intPreferencesKey("hifz_reminder_hour")
+        val HIFZ_REMINDER_MINUTE = intPreferencesKey("hifz_reminder_minute")
+    }
+
+    val dailyMemorizationTarget: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.DAILY_MEMORIZATION_TARGET] ?: 3
+    }
+
+    val hifzReminderEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.HIFZ_REMINDER_ENABLED] ?: false
+    }
+
+    val hifzReminderHour: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.HIFZ_REMINDER_HOUR] ?: 20
+    }
+
+    val hifzReminderMinute: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.HIFZ_REMINDER_MINUTE] ?: 0
     }
 
     val bookmarkedAyahs: Flow<Set<String>> = context.dataStore.data.map { prefs ->
@@ -107,6 +128,25 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[Keys.LAST_SURAH] = surahNumber
             prefs[Keys.LAST_AYAH_INDEX] = ayahIndex
+        }
+    }
+
+    suspend fun setDailyMemorizationTarget(target: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.DAILY_MEMORIZATION_TARGET] = target.coerceAtLeast(1)
+        }
+    }
+
+    suspend fun setHifzReminderEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.HIFZ_REMINDER_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setHifzReminderTime(hour: Int, minute: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.HIFZ_REMINDER_HOUR] = hour.coerceIn(0, 23)
+            prefs[Keys.HIFZ_REMINDER_MINUTE] = minute.coerceIn(0, 59)
         }
     }
 }

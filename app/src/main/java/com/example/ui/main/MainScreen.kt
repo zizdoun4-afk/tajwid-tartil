@@ -164,8 +164,13 @@ fun MainScreen(
                 val memorizationViewModel: MemorizationViewModel = viewModel()
                 MemorizationScreen(
                     viewModel = memorizationViewModel,
-                    onStartTraining = { surahNum, ayahNum ->
-                        navController.navigate("training/$surahNum/$ayahNum")
+                    onStartTraining = { surahNum, ayahNum, initialStep ->
+                        val route = if (initialStep != null) {
+                            "training/$surahNum/$ayahNum?step=$initialStep"
+                        } else {
+                            "training/$surahNum/$ayahNum"
+                        }
+                        navController.navigate(route)
                     }
                 )
             }
@@ -208,20 +213,27 @@ fun MainScreen(
             }
 
             composable(
-                route = "training/{surahNumber}/{ayahNumber}",
+                route = "training/{surahNumber}/{ayahNumber}?step={step}",
                 arguments = listOf(
                     navArgument("surahNumber") { type = NavType.IntType },
-                    navArgument("ayahNumber") { type = NavType.IntType }
+                    navArgument("ayahNumber") { type = NavType.IntType },
+                    navArgument("step") { type = NavType.StringType; nullable = true; defaultValue = null }
                 )
             ) { backStackEntry ->
                 val surahNumber = backStackEntry.arguments?.getInt("surahNumber") ?: 1
                 val ayahNumber = backStackEntry.arguments?.getInt("ayahNumber") ?: 1
+                val stepArg = backStackEntry.arguments?.getString("step")
+                val initialStep = when (stepArg?.uppercase()) {
+                    "BLIND_TEST" -> com.example.ui.training.TrainingStep.BLIND_TEST
+                    else -> com.example.ui.training.TrainingStep.LISTEN_3X
+                }
                 val trainingViewModel: TrainingSessionViewModel = viewModel(
+                    key = "training_${surahNumber}_${ayahNumber}_$stepArg",
                     factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
                         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                             val app = (navController.context.applicationContext as android.app.Application)
-                            return TrainingSessionViewModel(app, surahNumber, ayahNumber) as T
+                            return TrainingSessionViewModel(app, surahNumber, ayahNumber, initialStep) as T
                         }
                     }
                 )
