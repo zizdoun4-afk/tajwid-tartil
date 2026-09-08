@@ -304,6 +304,28 @@ interface AppStrings {
     val readWithMeYourTurn: String
     val readWithMeRepeatButton: String
     val readWithMeNextAyah: String
+
+    // Phase 5: Voice Intelligence & Rafiq Al-Quran
+    val rafiqTitle: String
+    val rafiqSubtitle: String
+    val rafiqHeaderArabic: String
+    val rafiqDailySmartSession: String
+    val rafiqDailySmartSessionDesc: String
+    val rafiqVoiceAnalyzerTitle: String
+    val rafiqVoiceAnalyzerDesc: String
+    val rafiqStartSmartSession: String
+    val rafiqDueAyahsCountFormat: String
+    val rafiqWeakAyahsCountFormat: String
+    val rafiqDailyGoalFormat: String
+    val rafiqAcousticDiagnosticTitle: String
+    val rafiqTempoLabel: String
+    val rafiqPausesLabel: String
+    val rafiqStabilityLabel: String
+    val rafiqPedagogicalDisclaimer: String
+    val rafiqSelfValidationPrompt: String
+    val rafiqCompareWithModel: String
+    val rafiqMyVoiceAnalysis: String
+    val rafiqStrengthenRecommendationsTitle: String
 }
 
 object ArabicAppStrings : AppStrings {
@@ -592,6 +614,28 @@ object ArabicAppStrings : AppStrings {
     override val readWithMeYourTurn = "دورك الآن: اقرأ الآية بصوت واضح"
     override val readWithMeRepeatButton = "إعادة الاستماع"
     override val readWithMeNextAyah = "الآية التالية"
+
+    // Phase 5: Voice Intelligence & Rafiq Al-Quran
+    override val rafiqTitle = "رفيق القرآن"
+    override val rafiqSubtitle = "المساعد الذكي لمراجعة الحفظ وتحسين التلاوة"
+    override val rafiqHeaderArabic = "رفيق القرآن الكريم"
+    override val rafiqDailySmartSession = "الجلسة الذكية اليومية"
+    override val rafiqDailySmartSessionDesc = "مراجعة تلقائية للآيات المستحقة مع تحليل صوتي موجه"
+    override val rafiqVoiceAnalyzerTitle = "محلل التلاوة الصوتي"
+    override val rafiqVoiceAnalyzerDesc = "تحليل الإيقاع والوقف وثبات الصوت مع نقاط التجويد"
+    override val rafiqStartSmartSession = "بدء الجلسة الذكية ▶"
+    override val rafiqDueAyahsCountFormat = "%d آيات مستحقة للمراجعة"
+    override val rafiqWeakAyahsCountFormat = "%d آيات بحاجة لتثبيت"
+    override val rafiqDailyGoalFormat = "الهدف اليومي: %d آيات"
+    override val rafiqAcousticDiagnosticTitle = "التقرير الصوتي والإيقاعي"
+    override val rafiqTempoLabel = "إيقاع الترتيل"
+    override val rafiqPausesLabel = "الوقف والتنفس"
+    override val rafiqStabilityLabel = "ثبات النبرة والصوت"
+    override val rafiqPedagogicalDisclaimer = "هذا التحليل الصوتي وسيلة تدريبية استرشادية ولا يغني عن التلقي والمشافهة على يد شيخ متقن."
+    override val rafiqSelfValidationPrompt = "استمع لتسجيلك وقارنه بالنموذج ثم قيّم مدى إتقانك:"
+    override val rafiqCompareWithModel = "مقارنة مع القارئ المرجعي"
+    override val rafiqMyVoiceAnalysis = "تحليل تلاوتي"
+    override val rafiqStrengthenRecommendationsTitle = "توصيات تعزيز الحفظ والتجويد"
 }
 
 object FrenchAppStrings : AppStrings {
@@ -880,6 +924,28 @@ object FrenchAppStrings : AppStrings {
     override val readWithMeYourTurn = "À votre tour : récitez le verset distinctement"
     override val readWithMeRepeatButton = "Réécouter le modèle"
     override val readWithMeNextAyah = "Verset suivant"
+
+    // Phase 5: Voice Intelligence & Rafiq Al-Quran
+    override val rafiqTitle = "Rafiq Al-Quran"
+    override val rafiqSubtitle = "Compagnon intelligent d'étude et d'analyse vocale"
+    override val rafiqHeaderArabic = "رفيق القرآن الكريم"
+    override val rafiqDailySmartSession = "Session Intelligente du Jour"
+    override val rafiqDailySmartSessionDesc = "Révision ciblée de vos versets dus avec analyse acoustique et rythme"
+    override val rafiqVoiceAnalyzerTitle = "Analyseur Vocal de Récitation"
+    override val rafiqVoiceAnalyzerDesc = "Analyse du tempo, des pauses et vérification des règles de Tajwid"
+    override val rafiqStartSmartSession = "Démarrer la Session Intelligente ▶"
+    override val rafiqDueAyahsCountFormat = "%d verset(s) à réviser aujourd'hui"
+    override val rafiqWeakAyahsCountFormat = "%d verset(s) à consolider"
+    override val rafiqDailyGoalFormat = "Objectif : %d versets / jour"
+    override val rafiqAcousticDiagnosticTitle = "Diagnostic Acoustique & Rythme"
+    override val rafiqTempoLabel = "Tempo du Tartil"
+    override val rafiqPausesLabel = "Pauses & Respiration"
+    override val rafiqStabilityLabel = "Stabilité & Souffle"
+    override val rafiqPedagogicalDisclaimer = "Cette analyse assistée est un repère indicatif pour votre entraînement personnel et ne remplace pas l'enseignement d'un professeur qualifié."
+    override val rafiqSelfValidationPrompt = "Écoutez votre récitation, comparez-la au modèle et auto-évaluez votre révision :"
+    override val rafiqCompareWithModel = "Comparer avec le modèle"
+    override val rafiqMyVoiceAnalysis = "Analyse de ma récitation"
+    override val rafiqStrengthenRecommendationsTitle = "Recommandations du jour"
 }
 
 fun getAppStrings(language: AppLanguage): AppStrings {

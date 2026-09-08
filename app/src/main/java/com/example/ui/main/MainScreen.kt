@@ -176,6 +176,9 @@ fun MainScreen(
                             "training/$surahNum/$ayahNum"
                         }
                         navController.navigate(route)
+                    },
+                    onNavigateToRafiq = {
+                        navController.navigate("rafiq")
                     }
                 )
             }
@@ -315,6 +318,20 @@ fun MainScreen(
                     onBackClick = {
                         navController.popBackStack()
                     }
+                )
+            }
+
+            composable("rafiq") {
+                val rafiqViewModel: com.example.ui.companion.RafiqCompanionViewModel = viewModel()
+                com.example.ui.companion.RafiqCompanionScreen(
+                    strings = strings,
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToTajwidLesson = { lessonId ->
+                        navController.navigate("tajwid_lesson/$lessonId")
+                    },
+                    viewModel = rafiqViewModel
                 )
             }
         }

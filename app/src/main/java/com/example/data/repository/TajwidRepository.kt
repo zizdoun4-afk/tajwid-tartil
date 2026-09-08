@@ -51,7 +51,7 @@ class TajwidRepository(
     }
 
     companion object {
-        private val LESSONS = listOf(
+        val LESSONS = listOf(
             // BEGINNER
             TajwidLesson(
                 id = "makharij_basics",
@@ -416,6 +416,15 @@ class TajwidRepository(
         )
 
         val AYAH_ANNOTATIONS = mapOf(
+            "1:1" to listOf(
+                TajwidAnnotation(
+                    ruleNameFr = "Tarqîq du Lâm (ل)",
+                    ruleNameAr = "ترقيق لام لفظ الجلالة",
+                    targetSnippet = "بِسْمِ ٱللَّهِ",
+                    explanationFr = "Le Lâm du nom divin est aminci (Tarqîq) car précédé d'une Kasrah.",
+                    explanationAr = "ترقيق اللام من اسم الجلالة لكونها مسبوقة بكسر."
+                )
+            ),
             "1:2" to listOf(
                 TajwidAnnotation(
                     ruleNameFr = "Makhraj du Hâ (ح)",
