@@ -278,6 +278,32 @@ interface AppStrings {
     val hifzDueBadgeToday: String
     val hifzDueBadgeDaysFormat: String
     val hifzDueBadgeOverdueFormat: String
+
+    // Phase 4: Tajwid Hub & Lessons & Read With Me
+    val navTajwid: String
+    val tajwidHubTitle: String
+    val tajwidHubSubtitle: String
+    val tajwidHeaderArabic: String
+    val tajwidLevelBeginner: String
+    val tajwidLevelIntermediate: String
+    val tajwidLevelAdvanced: String
+    val tajwidRulesCountFormat: String
+    val tajwidExercisesCountFormat: String
+    val tajwidCompletedBadge: String
+    val tajwidProgressFormat: String
+    val tajwidListenExample: String
+    val tajwidExercisesTitle: String
+    val tajwidCheckAnswer: String
+    val tajwidCorrectAnswer: String
+    val tajwidWrongAnswer: String
+    val tajwidLessonCompletedCongratulations: String
+    val tajwidPointsToWatchTitle: String
+    val readWithMeTitle: String
+    val readWithMeSubtitle: String
+    val readWithMeListenModel: String
+    val readWithMeYourTurn: String
+    val readWithMeRepeatButton: String
+    val readWithMeNextAyah: String
 }
 
 object ArabicAppStrings : AppStrings {
@@ -541,6 +567,31 @@ object ArabicAppStrings : AppStrings {
     override val hifzDueBadgeToday = "مستحق اليوم"
     override val hifzDueBadgeDaysFormat = "خلال %d أيام"
     override val hifzDueBadgeOverdueFormat = "متأخر %d يوم"
+
+    override val navTajwid = "التجويد"
+    override val tajwidHubTitle = "دروس التجويد"
+    override val tajwidHubSubtitle = "تعلم أحكام التلاوة والتطبيق العملي"
+    override val tajwidHeaderArabic = "علم التجويد"
+    override val tajwidLevelBeginner = "مبتدئ"
+    override val tajwidLevelIntermediate = "متوسط"
+    override val tajwidLevelAdvanced = "متقدم"
+    override val tajwidRulesCountFormat = "%d أحكام"
+    override val tajwidExercisesCountFormat = "%d تمارين"
+    override val tajwidCompletedBadge = "مكتمل ✓"
+    override val tajwidProgressFormat = "%d من %d دروس مكتملة"
+    override val tajwidListenExample = "استمع للمثال الصوتي ▶"
+    override val tajwidExercisesTitle = "تمارين وتطبيقات عملية"
+    override val tajwidCheckAnswer = "تحقق من الإجابة"
+    override val tajwidCorrectAnswer = "✓ إجابة صحيحة، أحسنت!"
+    override val tajwidWrongAnswer = "✗ إجابة غير صحيحة، راجع الشرح"
+    override val tajwidLessonCompletedCongratulations = "تهانينا! لقد أكملت هذا الدرس بنجاح."
+    override val tajwidPointsToWatchTitle = "أحكام التجويد في هذه الآية"
+    override val readWithMeTitle = "اقرأ معي"
+    override val readWithMeSubtitle = "تلاوة موجهة خطوة بخطوة"
+    override val readWithMeListenModel = "استمع إلى القارئ النموذجي"
+    override val readWithMeYourTurn = "دورك الآن: اقرأ الآية بصوت واضح"
+    override val readWithMeRepeatButton = "إعادة الاستماع"
+    override val readWithMeNextAyah = "الآية التالية"
 }
 
 object FrenchAppStrings : AppStrings {
@@ -804,6 +855,31 @@ object FrenchAppStrings : AppStrings {
     override val hifzDueBadgeToday = "Aujourd'hui"
     override val hifzDueBadgeDaysFormat = "Dans %d j"
     override val hifzDueBadgeOverdueFormat = "En retard de %d j"
+
+    override val navTajwid = "Tajwid"
+    override val tajwidHubTitle = "Leçons de Tajwid"
+    override val tajwidHubSubtitle = "Apprenez les règles avec exemples audio et exercices"
+    override val tajwidHeaderArabic = "علم التجويد"
+    override val tajwidLevelBeginner = "Débutant"
+    override val tajwidLevelIntermediate = "Intermédiaire"
+    override val tajwidLevelAdvanced = "Avancé"
+    override val tajwidRulesCountFormat = "%d règles"
+    override val tajwidExercisesCountFormat = "%d exercices"
+    override val tajwidCompletedBadge = "Complété ✓"
+    override val tajwidProgressFormat = "%d / %d leçons terminées"
+    override val tajwidListenExample = "Écouter l'exemple audio ▶"
+    override val tajwidExercisesTitle = "Exercices d'application"
+    override val tajwidCheckAnswer = "Vérifier la réponse"
+    override val tajwidCorrectAnswer = "✓ Excellente réponse !"
+    override val tajwidWrongAnswer = "✗ Réponse incorrecte, relisez l'explication"
+    override val tajwidLessonCompletedCongratulations = "Félicitations ! Vous avez terminé cette leçon avec succès."
+    override val tajwidPointsToWatchTitle = "Points de Tajwid dans ce verset"
+    override val readWithMeTitle = "Lis avec moi"
+    override val readWithMeSubtitle = "Lecture guidée verset par verset"
+    override val readWithMeListenModel = "Écoutez le modèle référent"
+    override val readWithMeYourTurn = "À votre tour : récitez le verset distinctement"
+    override val readWithMeRepeatButton = "Réécouter le modèle"
+    override val readWithMeNextAyah = "Verset suivant"
 }
 
 fun getAppStrings(language: AppLanguage): AppStrings {

@@ -46,17 +46,21 @@ import com.example.ui.training.TrainingSessionViewModel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+import androidx.compose.material.icons.filled.School
+
 sealed class BottomNavRoute(val route: String, val icon: ImageVector) {
     object Surahs : BottomNavRoute("surahs", Icons.AutoMirrored.Filled.MenuBook)
-    object Library : BottomNavRoute("library", Icons.Default.LibraryMusic)
+    object Tajwid : BottomNavRoute("tajwid", Icons.Default.School)
     object Memorization : BottomNavRoute("memorization", Icons.Default.Psychology)
+    object Library : BottomNavRoute("library", Icons.Default.LibraryMusic)
     object Settings : BottomNavRoute("settings", Icons.Default.Settings)
 }
 
 val BOTTOM_NAV_ITEMS = listOf(
     BottomNavRoute.Surahs,
-    BottomNavRoute.Library,
-    BottomNavRoute.Memorization
+    BottomNavRoute.Tajwid,
+    BottomNavRoute.Memorization,
+    BottomNavRoute.Library
 )
 
 @Composable
@@ -81,8 +85,9 @@ fun MainScreen(
                         val selected = currentRoute == item.route
                         val labelText = when (item) {
                             BottomNavRoute.Surahs -> strings.navSurahs
-                            BottomNavRoute.Library -> strings.navLibrary
+                            BottomNavRoute.Tajwid -> strings.navTajwid
                             BottomNavRoute.Memorization -> strings.navMemorization
+                            BottomNavRoute.Library -> strings.navLibrary
                             BottomNavRoute.Settings -> strings.navSettings
                         }
                         NavigationBarItem(
@@ -175,6 +180,42 @@ fun MainScreen(
                 )
             }
 
+            composable(BottomNavRoute.Tajwid.route) {
+                val tajwidViewModel: com.example.ui.tajwid.TajwidHubViewModel = viewModel()
+                com.example.ui.tajwid.TajwidHubScreen(
+                    viewModel = tajwidViewModel,
+                    onOpenLesson = { lessonId ->
+                        navController.navigate("tajwid_lesson/$lessonId")
+                    }
+                )
+            }
+
+            composable(
+                route = "tajwid_lesson/{lessonId}",
+                arguments = listOf(
+                    navArgument("lessonId") { type = NavType.StringType }
+                )
+            ) { backStackEntry ->
+                val lessonId = backStackEntry.arguments?.getString("lessonId") ?: ""
+                val lessonDetailViewModel: com.example.ui.tajwid.TajwidLessonDetailViewModel = viewModel(
+                    key = "lesson_$lessonId",
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            val app = (navController.context.applicationContext as android.app.Application)
+                            return com.example.ui.tajwid.TajwidLessonDetailViewModel(app, lessonId) as T
+                        }
+                    }
+                )
+
+                com.example.ui.tajwid.TajwidLessonDetailScreen(
+                    viewModel = lessonDetailViewModel,
+                    onBackClick = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
             composable(BottomNavRoute.Settings.route) {
                 val settingsViewModel: SettingsViewModel = viewModel()
                 SettingsScreen(
@@ -208,6 +249,37 @@ fun MainScreen(
                     },
                     onStartTraining = { sNum, aNum ->
                         navController.navigate("training/$sNum/$aNum")
+                    },
+                    onReadWithMeClick = { sNum, aIdx ->
+                        navController.navigate("read_with_me/$sNum/$aIdx")
+                    }
+                )
+            }
+
+            composable(
+                route = "read_with_me/{surahNumber}/{ayahIndex}",
+                arguments = listOf(
+                    navArgument("surahNumber") { type = NavType.IntType },
+                    navArgument("ayahIndex") { type = NavType.IntType; defaultValue = 0 }
+                )
+            ) { backStackEntry ->
+                val surahNumber = backStackEntry.arguments?.getInt("surahNumber") ?: 1
+                val ayahIndex = backStackEntry.arguments?.getInt("ayahIndex") ?: 0
+                val readWithMeViewModel: com.example.ui.tajwid.ReadWithMeViewModel = viewModel(
+                    key = "read_with_me_${surahNumber}_$ayahIndex",
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            val app = (navController.context.applicationContext as android.app.Application)
+                            return com.example.ui.tajwid.ReadWithMeViewModel(app, surahNumber, ayahIndex) as T
+                        }
+                    }
+                )
+
+                com.example.ui.tajwid.ReadWithMeScreen(
+                    viewModel = readWithMeViewModel,
+                    onBackClick = {
+                        navController.popBackStack()
                     }
                 )
             }
