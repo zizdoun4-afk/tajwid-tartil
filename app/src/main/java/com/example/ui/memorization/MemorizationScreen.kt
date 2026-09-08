@@ -100,8 +100,8 @@ fun MemorizationScreen(
                 item {
                     WeeklyStatsGrid(
                         versesReviewed = uiState.versesReviewedWeek,
-                        versesMemorized = uiState.versesMemorizedTotal,
-                        practiceMinutes = uiState.totalPracticeMinutes
+                        versesLearning = uiState.versesLearningTotal,
+                        versesMemorized = uiState.versesMemorizedTotal
                     )
                 }
 
@@ -193,8 +193,8 @@ fun MemorizationScreen(
 @Composable
 fun WeeklyStatsGrid(
     versesReviewed: Int,
-    versesMemorized: Int,
-    practiceMinutes: Long
+    versesLearning: Int,
+    versesMemorized: Int
 ) {
     val strings = LocalAppStrings.current
     Row(
@@ -211,18 +211,18 @@ fun WeeklyStatsGrid(
 
         StatCard(
             modifier = Modifier.weight(1f),
-            icon = Icons.Default.CheckCircle,
-            value = versesMemorized.toString(),
-            label = strings.hifzVersesMemorized,
-            accentColor = Color(0xFF2E7D32)
+            icon = Icons.Default.Psychology,
+            value = versesLearning.toString(),
+            label = strings.hifzVersesLearning,
+            accentColor = MaterialTheme.colorScheme.secondary
         )
 
         StatCard(
             modifier = Modifier.weight(1f),
-            icon = Icons.Default.Equalizer,
-            value = "${practiceMinutes}m",
-            label = strings.hifzPracticeTime,
-            accentColor = MaterialTheme.colorScheme.secondary
+            icon = Icons.Default.CheckCircle,
+            value = versesMemorized.toString(),
+            label = strings.hifzVersesMemorized,
+            accentColor = Color(0xFF2E7D32)
         )
     }
 }

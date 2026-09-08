@@ -7,7 +7,6 @@ import com.example.data.local.db.AppDatabase
 import com.example.data.local.db.MemorizationStatusEntity
 import com.example.data.repository.MemorizationRepository
 import com.example.data.repository.QuranRepository
-import com.example.data.repository.RecordingRepository
 import com.example.data.repository.SurahMemorizationProgress
 import com.example.domain.model.MemorizationStatus
 import com.example.domain.model.Surah
@@ -25,7 +24,7 @@ data class HifzDashboardUiState(
     val surahsMap: Map<Int, Surah> = emptyMap(),
     val versesReviewedWeek: Int = 0,
     val versesMemorizedTotal: Int = 0,
-    val totalPracticeMinutes: Long = 0L
+    val versesLearningTotal: Int = 0
 )
 
 class MemorizationViewModel(application: Application) : AndroidViewModel(application) {
@@ -33,7 +32,6 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
     private val db = AppDatabase.getInstance(application)
     private val memorizationRepository = MemorizationRepository(db.memorizationDao())
     private val quranRepository = QuranRepository(db.quranCacheDao(), application)
-    private val recordingRepository = RecordingRepository(application, db.recordingDao())
 
     private val _uiState = MutableStateFlow(HifzDashboardUiState())
     val uiState: StateFlow<HifzDashboardUiState> = _uiState.asStateFlow()
@@ -52,12 +50,10 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
             combine(
                 memorizationRepository.getDueForReview(),
                 memorizationRepository.getInReviewStatus(),
-                memorizationRepository.getAllStatusesFlow(),
-                recordingRepository.allRecordings
-            ) { due, inReview, allStatuses, recordings ->
+                memorizationRepository.getAllStatusesFlow()
+            ) { due, inReview, allStatuses ->
                 val memorizedCount = allStatuses.count { it.status == MemorizationStatus.MEMORIZED.name }
-                val totalAudioMs = recordings.sumOf { it.durationMs }
-                val totalMinutes = totalAudioMs / 60000
+                val learningCount = allStatuses.count { it.status == MemorizationStatus.LEARNING.name }
 
                 // Group by surah to calculate progress %
                 val groupedBySurah = allStatuses.groupBy { it.surahNumber }
@@ -88,7 +84,7 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
                     surahsMap = surahMap,
                     versesReviewedWeek = weeklyReviewed,
                     versesMemorizedTotal = memorizedCount,
-                    totalPracticeMinutes = totalMinutes
+                    versesLearningTotal = learningCount
                 )
             }.collect { newState ->
                 _uiState.value = newState

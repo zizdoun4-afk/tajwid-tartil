@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.audio.AudioPlayer
-import com.example.audio.PlayerState
 import com.example.audio.QuranRecorderEngine
 import com.example.audio.QuranRecorderEngineImpl
 import com.example.audio.RepeatMode
@@ -16,6 +15,9 @@ import com.example.domain.model.Ayah
 import com.example.domain.model.MemorizationStatus
 import com.example.domain.model.RecitationStyle
 import com.example.domain.model.Surah
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,6 +42,7 @@ data class TrainingSessionUiState(
     val userRecordingFile: File? = null,
     val isTextRevealed: Boolean = false,
     val isSessionCompleted: Boolean = false,
+    val showExitDialog: Boolean = false,
     val status: MemorizationStatus = MemorizationStatus.NEW,
     val message: String? = null
 )
@@ -57,6 +60,10 @@ class TrainingSessionViewModel(
 
     val audioPlayer = AudioPlayer(application)
     val quranRecorderEngine: QuranRecorderEngine = QuranRecorderEngineImpl(application)
+
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    private var tempRecordingDurationMs: Long = 0L
 
     private val _uiState = MutableStateFlow(TrainingSessionUiState())
     val uiState: StateFlow<TrainingSessionUiState> = _uiState.asStateFlow()
@@ -99,7 +106,7 @@ class TrainingSessionViewModel(
         audioPlayer.setRepeatMode(
             when (repeatCount) {
                 3 -> RepeatMode.THREE_TIMES
-                else -> RepeatMode.ONCE
+                else -> RepeatMode.OFF
             }
         )
         audioPlayer.togglePlayPause(url)
@@ -117,20 +124,11 @@ class TrainingSessionViewModel(
             val result = quranRecorderEngine.stopTake()
             if (result != null) {
                 val file = File(result.filePath)
+                tempRecordingDurationMs = result.durationMs
                 _uiState.value = _uiState.value.copy(
                     userRecordingFile = file,
-                    message = "Enregistrement terminé !"
-                )
-
-                // Save recording in store
-                recitationsStore.saveAyahRecording(
-                    tempPath = result.filePath,
-                    sura = surahNumber,
-                    surahName = _uiState.value.surah?.name ?: "Sourate $surahNumber",
-                    aya = ayahNumber,
-                    riwaya = "hafs",
-                    durationMs = result.durationMs,
-                    reciterName = "Entraînement Hifz"
+                    recordingDurationMs = result.durationMs,
+                    message = null
                 )
             }
         }
@@ -147,7 +145,21 @@ class TrainingSessionViewModel(
         _uiState.value = _uiState.value.copy(isTextRevealed = !_uiState.value.isTextRevealed)
     }
 
+    fun canProceedToNextStep(): Boolean {
+        return when (_uiState.value.currentStep) {
+            TrainingStep.LISTEN_3X -> true
+            TrainingStep.ACCOMPANIED_READING -> true
+            TrainingStep.SOLO_RECORDING -> {
+                val file = _uiState.value.userRecordingFile
+                file != null && file.exists()
+            }
+            TrainingStep.PLAYBACK_REVIEW -> true
+            TrainingStep.BLIND_TEST -> false
+        }
+    }
+
     fun goToNextStep() {
+        if (!canProceedToNextStep()) return
         audioPlayer.stop()
         val next = when (_uiState.value.currentStep) {
             TrainingStep.LISTEN_3X -> TrainingStep.ACCOMPANIED_READING
@@ -177,19 +189,76 @@ class TrainingSessionViewModel(
         )
     }
 
-    fun completeSession() {
+    fun validateBlindTest(succeeded: Boolean) {
         viewModelScope.launch {
-            val updated = memorizationRepository.markReviewed(surahNumber, ayahNumber)
-            _uiState.value = _uiState.value.copy(
-                isSessionCompleted = true,
-                status = updated.memorizationStatus,
-                message = "Session validée avec succès !"
+            audioPlayer.stop()
+            if (succeeded) {
+                val updated = memorizationRepository.markMemorized(surahNumber, ayahNumber)
+                persistRecordingIfAvailable()
+                _uiState.value = _uiState.value.copy(
+                    isSessionCompleted = true,
+                    status = updated.memorizationStatus,
+                    isTextRevealed = true
+                )
+            } else {
+                val updated = memorizationRepository.markReviewed(surahNumber, ayahNumber)
+                _uiState.value = _uiState.value.copy(
+                    isSessionCompleted = false,
+                    status = updated.memorizationStatus,
+                    isTextRevealed = false
+                )
+            }
+        }
+    }
+
+    private suspend fun persistRecordingIfAvailable() {
+        val file = _uiState.value.userRecordingFile
+        if (file != null && file.exists()) {
+            recitationsStore.saveAyahRecording(
+                tempPath = file.absolutePath,
+                sura = surahNumber,
+                surahName = _uiState.value.surah?.name ?: "Sourate $surahNumber",
+                aya = ayahNumber,
+                riwaya = "hafs",
+                durationMs = tempRecordingDurationMs,
+                reciterName = "Entraînement Hifz"
             )
         }
+    }
+
+    fun showExitConfirmation() {
+        _uiState.value = _uiState.value.copy(showExitDialog = true)
+    }
+
+    fun dismissExitConfirmation() {
+        _uiState.value = _uiState.value.copy(showExitDialog = false)
+    }
+
+    fun abandonSession() {
+        audioPlayer.stop()
+        cleanupScope.launch {
+            if (_uiState.value.isRecording) {
+                quranRecorderEngine.discardTake()
+            }
+            _uiState.value.userRecordingFile?.let { file ->
+                if (file.exists()) file.delete()
+            }
+        }
+        _uiState.value = _uiState.value.copy(showExitDialog = false)
     }
 
     override fun onCleared() {
         super.onCleared()
         audioPlayer.release()
+        cleanupScope.launch {
+            if (_uiState.value.isRecording) {
+                quranRecorderEngine.discardTake()
+            }
+            if (!_uiState.value.isSessionCompleted) {
+                _uiState.value.userRecordingFile?.let { file ->
+                    if (file.exists()) file.delete()
+                }
+            }
+        }
     }
 }

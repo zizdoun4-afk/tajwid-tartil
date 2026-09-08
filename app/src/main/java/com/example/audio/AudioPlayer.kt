@@ -73,7 +73,16 @@ class AudioPlayer(private val context: Context) {
 
     fun setRepeatMode(mode: RepeatMode) {
         _repeatMode.value = mode
-        currentRemainingRepeats = mode.count
+        currentRemainingRepeats = calculateRemainingRepeats(mode)
+    }
+
+    private fun calculateRemainingRepeats(mode: RepeatMode): Int {
+        return when (mode) {
+            RepeatMode.OFF -> 0
+            RepeatMode.ONCE -> 1
+            RepeatMode.THREE_TIMES -> 2 // 1 initial play + 2 repeats = 3 total plays
+            RepeatMode.LOOP -> RepeatMode.LOOP.count
+        }
     }
 
     fun play(dataSource: String, onComplete: (() -> Unit)? = null) {
@@ -90,7 +99,7 @@ class AudioPlayer(private val context: Context) {
 
         _currentSource.value = dataSource
         _playerState.value = PlayerState.Loading
-        currentRemainingRepeats = _repeatMode.value.count
+        currentRemainingRepeats = calculateRemainingRepeats(_repeatMode.value)
 
         try {
             val player = MediaPlayer().apply {

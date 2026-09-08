@@ -58,6 +58,21 @@ interface AppStrings {
     val nextStepButton: String
     val prevStepButton: String
     val testSelfHelp: String
+    val listen3xButton: String
+    val listenAccompaniedButton: String
+    val recordSoloButton: String
+    val stopRecordingDurationFormat: String
+    val compareModelLabel: String
+    val compareMyVoiceLabel: String
+    val blindTestSuccessButton: String
+    val blindTestRetryButton: String
+    val blindTestPrompt: String
+    val trainingExitConfirmTitle: String
+    val trainingExitConfirmMessage: String
+    val quitButton: String
+    val continueTrainingButton: String
+    val hifzVersesLearning: String
+    val recordRequiredToProceed: String
 
     // Surah List Screen
     val surahSearchPlaceholder: String
@@ -266,6 +281,21 @@ object ArabicAppStrings : AppStrings {
     override val nextStepButton = "الخطوة التالية ▶"
     override val prevStepButton = "◀ الخطوة السابقة"
     override val testSelfHelp = "ردّد الآية من ذاكرتك ثم اضغط على إظهار النص للمقارنة والتثبت"
+    override val listen3xButton = "الاستماع ٣ مرات متتالية 🔁"
+    override val listenAccompaniedButton = "بدء القراءة المصاحبة 🎧"
+    override val recordSoloButton = "تسجيل تلاوتي بمفردي 🎙"
+    override val stopRecordingDurationFormat = "إيقاف (%d ثانية) ⏹"
+    override val compareModelLabel = "النموذج"
+    override val compareMyVoiceLabel = "تلاوتي"
+    override val blindTestSuccessButton = "✓ أتقنت الحفظ غيباً"
+    override val blindTestRetryButton = "↻ إعادة المحاولة"
+    override val blindTestPrompt = "اتلُ الآية من حفظك غيباً، ثم أظهر النص القرآني للمقارنة والتحقق:"
+    override val trainingExitConfirmTitle = "مغادرة جلسة التدريب؟"
+    override val trainingExitConfirmMessage = "إذا غادرت الآن، فسيتم إلغاء الجلسة الحالية والتسجيل الصوتي المؤقت."
+    override val quitButton = "مغادرة"
+    override val continueTrainingButton = "متابعة التدريب"
+    override val hifzVersesLearning = "قيد الحفظ"
+    override val recordRequiredToProceed = "يرجى تسجيل تلاوتك أولاً للمتابعة إلى الخطوة التالية."
 
     override val surahSearchPlaceholder = "ابحث عن سورة (بالاسم أو الرقم)..."
     override val surahVersesCount = "%d آيات"
@@ -463,6 +493,21 @@ object FrenchAppStrings : AppStrings {
     override val nextStepButton = "Étape suivante ▶"
     override val prevStepButton = "◀ Étape précédente"
     override val testSelfHelp = "Récitez le verset de tête, puis cliquez sur 'Afficher le texte' pour vérifier votre exactitude."
+    override val listen3xButton = "Écouter 3 fois de suite 🔁"
+    override val listenAccompaniedButton = "Lancer la lecture accompagnée 🎧"
+    override val recordSoloButton = "Enregistrer ma récitation seule 🎙"
+    override val stopRecordingDurationFormat = "Arrêter (%ds) ⏹"
+    override val compareModelLabel = "Modèle"
+    override val compareMyVoiceLabel = "Ma voix"
+    override val blindTestSuccessButton = "✓ J'ai réussi (Mémorisé)"
+    override val blindTestRetryButton = "↻ Réessayer"
+    override val blindTestPrompt = "Récitez le verset de mémoire, puis révélez le texte coranique pour vérifier votre récitation :"
+    override val trainingExitConfirmTitle = "Quitter l'entraînement ?"
+    override val trainingExitConfirmMessage = "Si vous quittez maintenant, la session en cours et l'enregistrement temporaire seront annulés."
+    override val quitButton = "Quitter"
+    override val continueTrainingButton = "Continuer"
+    override val hifzVersesLearning = "En apprentissage"
+    override val recordRequiredToProceed = "Veuillez enregistrer votre récitation avant de passer à l'étape suivante."
 
     override val surahSearchPlaceholder = "Rechercher une sourate (nom ou numéro)..."
     override val surahVersesCount = "%d versets"

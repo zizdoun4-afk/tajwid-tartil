@@ -218,7 +218,7 @@ class AyahReaderViewModel(
                 reciterNameInput = defaultReciter
             )
 
-            val surah = QuranRepository.DEFAULT_SURAHS.find { it.number == surahNumber }
+            val surah = quranRepository.getDefaultSurahs().find { it.number == surahNumber }
             _uiState.value = _uiState.value.copy(surah = surah)
 
             val result = quranRepository.getSurahAyahs(surahNumber)

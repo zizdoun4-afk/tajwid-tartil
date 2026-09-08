@@ -74,7 +74,15 @@ class MemorizationRepository(
             else -> 14L
         }
         val nextDue = now + (intervalDays * oneDayMs)
-        val newStatus = if (nextCount >= 4) MemorizationStatus.MEMORIZED else MemorizationStatus.REVIEW
+
+        // Never automatically promote to MEMORIZED solely based on review count.
+        // Status remains REVIEW (or retains MEMORIZED if it was already validated).
+        val currentStatus = existing?.memorizationStatus
+        val newStatus = if (currentStatus == MemorizationStatus.MEMORIZED) {
+            MemorizationStatus.MEMORIZED
+        } else {
+            MemorizationStatus.REVIEW
+        }
 
         val entity = (existing ?: MemorizationStatusEntity(
             surahNumber = surahNumber,
@@ -82,6 +90,31 @@ class MemorizationRepository(
             status = newStatus.name
         )).copy(
             status = newStatus.name,
+            lastReviewedAtEpochMillis = now,
+            nextReviewDueEpochMillis = nextDue,
+            reviewCount = nextCount
+        )
+
+        memorizationDao.upsertStatus(entity)
+        entity
+    }
+
+    suspend fun markMemorized(
+        surahNumber: Int,
+        ayahNumber: Int
+    ): MemorizationStatusEntity = withContext(Dispatchers.IO) {
+        val existing = memorizationDao.getStatusForAyah(surahNumber, ayahNumber)
+        val now = System.currentTimeMillis()
+        val nextCount = (existing?.reviewCount ?: 0) + 1
+        val oneDayMs = 24L * 60 * 60 * 1000
+        val nextDue = now + (14L * oneDayMs) // Maintenance review due in 14 days
+
+        val entity = (existing ?: MemorizationStatusEntity(
+            surahNumber = surahNumber,
+            ayahNumber = ayahNumber,
+            status = MemorizationStatus.MEMORIZED.name
+        )).copy(
+            status = MemorizationStatus.MEMORIZED.name,
             lastReviewedAtEpochMillis = now,
             nextReviewDueEpochMillis = nextDue,
             reviewCount = nextCount

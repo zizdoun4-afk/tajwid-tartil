@@ -2,6 +2,7 @@ package com.example.ui.training
 
 import android.Manifest
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -30,10 +31,12 @@ import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -44,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,6 +88,40 @@ fun TrainingSessionScreen(
         }
     }
 
+    // Intercept back navigation
+    BackHandler(enabled = true) {
+        if (uiState.isSessionCompleted) {
+            onBackClick()
+        } else {
+            viewModel.showExitConfirmation()
+        }
+    }
+
+    // Exit confirmation dialog
+    if (uiState.showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissExitConfirmation() },
+            title = { Text(strings.trainingExitConfirmTitle) },
+            text = { Text(strings.trainingExitConfirmMessage) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.abandonSession()
+                        onBackClick()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(strings.quitButton)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissExitConfirmation() }) {
+                    Text(strings.continueTrainingButton)
+                }
+            }
+        )
+    }
+
     LaunchedEffect(uiState.message) {
         uiState.message?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
@@ -98,14 +136,19 @@ fun TrainingSessionScreen(
         // Header
         ZelligeHeader(
             title = String.format(strings.trainingTitleFormat, uiState.surah?.name ?: "سورة ${viewModel.surahNumber}", viewModel.ayahNumber),
-            subtitle = uiState.surah?.let { "${it.englishName} • Verset ${viewModel.ayahNumber}" },
-            arabicTitle = uiState.surah?.name,
+            subtitle = uiState.status.name,
             navigationIcon = {
-                IconButton(onClick = onBackClick) {
+                IconButton(onClick = {
+                    if (uiState.isSessionCompleted) {
+                        onBackClick()
+                    } else {
+                        viewModel.showExitConfirmation()
+                    }
+                }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = strings.backButton,
-                        tint = MaterialTheme.colorScheme.onPrimary
+                        tint = Color.White
                     )
                 }
             }
@@ -114,10 +157,8 @@ fun TrainingSessionScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp)
         ) {
             // Step Progress Indicator (1 to 5)
             StepProgressBar(
@@ -127,36 +168,36 @@ fun TrainingSessionScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Step Header Card
+            // Current Step Header Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    val (stepTitle, stepDesc) = when (uiState.currentStep) {
-                        TrainingStep.LISTEN_3X -> strings.trainingStep1Title to strings.trainingStep1Desc
-                        TrainingStep.ACCOMPANIED_READING -> strings.trainingStep2Title to strings.trainingStep2Desc
-                        TrainingStep.SOLO_RECORDING -> strings.trainingStep3Title to strings.trainingStep3Desc
-                        TrainingStep.PLAYBACK_REVIEW -> strings.trainingStep4Title to strings.trainingStep4Desc
-                        TrainingStep.BLIND_TEST -> strings.trainingStep5Title to strings.trainingStep5Desc
-                    }
-
+                Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = stepTitle,
+                        text = when (uiState.currentStep) {
+                            TrainingStep.LISTEN_3X -> strings.trainingStep1Title
+                            TrainingStep.ACCOMPANIED_READING -> strings.trainingStep2Title
+                            TrainingStep.SOLO_RECORDING -> strings.trainingStep3Title
+                            TrainingStep.PLAYBACK_REVIEW -> strings.trainingStep4Title
+                            TrainingStep.BLIND_TEST -> strings.trainingStep5Title
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = stepDesc,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = when (uiState.currentStep) {
+                            TrainingStep.LISTEN_3X -> strings.trainingStep1Desc
+                            TrainingStep.ACCOMPANIED_READING -> strings.trainingStep2Desc
+                            TrainingStep.SOLO_RECORDING -> strings.trainingStep3Desc
+                            TrainingStep.PLAYBACK_REVIEW -> strings.trainingStep4Desc
+                            TrainingStep.BLIND_TEST -> strings.trainingStep5Desc
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -164,12 +205,12 @@ fun TrainingSessionScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Ayah Display Card
+            // Quranic Text Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -177,23 +218,8 @@ fun TrainingSessionScreen(
                         .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Badge status
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Text(
-                            text = "الآية ${viewModel.ayahNumber}",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    val isMasked = uiState.currentStep == TrainingStep.BLIND_TEST && !uiState.isTextRevealed
+                    val ayah = uiState.ayah
+                    val isBlurred = uiState.currentStep == TrainingStep.BLIND_TEST && !uiState.isTextRevealed
 
                     Box(
                         modifier = Modifier
@@ -202,32 +228,35 @@ fun TrainingSessionScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = uiState.ayah?.text ?: "...",
-                            style = QuranTextTypography,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .then(if (isMasked) Modifier.blur(16.dp) else Modifier)
+                            text = ayah?.text ?: "...",
+                            style = QuranTextTypography.copy(
+                                fontSize = 26.sp,
+                                lineHeight = 44.sp,
+                                textAlign = TextAlign.Center
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = if (isBlurred) Modifier.blur(16.dp) else Modifier
                         )
 
-                        if (isMasked) {
+                        if (isBlurred) {
                             Surface(
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                                shadowElevation = 4.dp
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .clickable { viewModel.toggleTextVisibility() }
                             ) {
                                 Row(
-                                    modifier = Modifier
-                                        .clickable { viewModel.toggleTextVisibility() }
-                                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Visibility,
                                         contentDescription = strings.revealTextButton,
-                                        tint = MaterialTheme.colorScheme.primary
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = strings.revealTextButton,
                                         style = MaterialTheme.typography.labelMedium,
@@ -269,11 +298,11 @@ fun TrainingSessionScreen(
                         val isPlaying = playerState is PlayerState.Playing
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.Repeat,
-                            contentDescription = "Écouter 3x"
+                            contentDescription = strings.listen3xButton
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isPlaying) strings.pauseButton else "Écouter 3 fois de suite 🔁",
+                            text = if (isPlaying) strings.pauseButton else strings.listen3xButton,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -292,11 +321,11 @@ fun TrainingSessionScreen(
                         val isPlaying = playerState is PlayerState.Playing
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = "Lecture"
+                            contentDescription = strings.listenAccompaniedButton
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isPlaying) strings.pauseButton else "Lancer la lecture accompagnée ▶",
+                            text = if (isPlaying) strings.pauseButton else strings.listenAccompaniedButton,
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -304,39 +333,53 @@ fun TrainingSessionScreen(
                 }
 
                 TrainingStep.SOLO_RECORDING -> {
-                    if (!uiState.isRecording) {
-                        Button(
-                            onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                        ) {
-                            Icon(imageVector = Icons.Default.Mic, contentDescription = "Enregistrer")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Enregistrer ma récitation seule 🎙",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        if (!uiState.isRecording) {
+                            Button(
+                                onClick = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Icon(imageVector = Icons.Default.Mic, contentDescription = strings.recordSoloButton)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (uiState.userRecordingFile != null) strings.reRecordButton else strings.recordSoloButton,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        } else {
+                            Button(
+                                onClick = { viewModel.stopRecording() },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Icon(imageVector = Icons.Default.Stop, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                val sec = (uiState.recordingDurationMs / 1000).toInt()
+                                Text(
+                                    text = String.format(strings.stopRecordingDurationFormat, sec),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
-                    } else {
-                        Button(
-                            onClick = { viewModel.stopRecording() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                        ) {
-                            Icon(imageVector = Icons.Default.Stop, contentDescription = "Arrêter")
-                            Spacer(modifier = Modifier.width(8.dp))
-                            val sec = uiState.recordingDurationMs / 1000
+
+                        if (uiState.userRecordingFile != null && !uiState.isRecording) {
                             Text(
-                                text = "Arrêter (${sec}s) ⏹",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
+                                text = "✓ ${strings.postRecordingMessage}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF2E7D32)
                             )
                         }
                     }
@@ -357,7 +400,7 @@ fun TrainingSessionScreen(
                         ) {
                             Icon(imageVector = Icons.Default.Headphones, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Modèle", maxLines = 1)
+                            Text(strings.compareModelLabel, maxLines = 1)
                         }
 
                         // Play user
@@ -371,30 +414,87 @@ fun TrainingSessionScreen(
                         ) {
                             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Ma voix", maxLines = 1)
+                            Text(strings.compareMyVoiceLabel, maxLines = 1)
                         }
                     }
                 }
 
                 TrainingStep.BLIND_TEST -> {
                     if (!uiState.isSessionCompleted) {
-                        Button(
-                            onClick = { viewModel.completeSession() },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = strings.finishTrainingButton,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
+                            if (!uiState.isTextRevealed) {
+                                Text(
+                                    text = strings.blindTestPrompt,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Button(
+                                    onClick = { viewModel.toggleTextVisibility() },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Visibility, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = strings.revealTextButton,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            } else {
+                                // Revealed: User validates result
+                                Text(
+                                    text = strings.testSelfHelp,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    // Retry button
+                                    OutlinedButton(
+                                        onClick = { viewModel.validateBlindTest(succeeded = false) },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(54.dp),
+                                        shape = RoundedCornerShape(14.dp)
+                                    ) {
+                                        Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(strings.blindTestRetryButton, maxLines = 1)
+                                    }
+
+                                    // Success / Memorized button
+                                    Button(
+                                        onClick = { viewModel.validateBlindTest(succeeded = true) },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(54.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
+                                    ) {
+                                        Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(strings.blindTestSuccessButton, maxLines = 1, color = Color.White)
+                                    }
+                                }
+                            }
                         }
                     } else {
+                        // Success screen
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
@@ -413,13 +513,13 @@ fun TrainingSessionScreen(
                                     color = Color(0xFF1B5E20),
                                     textAlign = TextAlign.Center
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Button(
                                     onClick = onBackClick,
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32))
                                 ) {
-                                    Text(strings.backButton)
+                                    Text(strings.backButton, color = Color.White)
                                 }
                             }
                         }
@@ -435,7 +535,7 @@ fun TrainingSessionScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (uiState.currentStep.stepNumber > 1) {
+                if (uiState.currentStep.stepNumber > 1 && !uiState.isSessionCompleted) {
                     TextButton(onClick = { viewModel.goToPrevStep() }) {
                         Text(strings.prevStepButton)
                     }
@@ -443,9 +543,17 @@ fun TrainingSessionScreen(
                     Spacer(modifier = Modifier.width(1.dp))
                 }
 
-                if (uiState.currentStep.stepNumber < 5) {
+                if (uiState.currentStep.stepNumber < 5 && !uiState.isSessionCompleted) {
+                    val canProceed = viewModel.canProceedToNextStep()
                     Button(
-                        onClick = { viewModel.goToNextStep() },
+                        onClick = {
+                            if (canProceed) {
+                                viewModel.goToNextStep()
+                            } else {
+                                Toast.makeText(context, strings.recordRequiredToProceed, Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        enabled = canProceed,
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(strings.nextStepButton)
@@ -489,7 +597,7 @@ fun StepProgressBar(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = Color.white,
+                        tint = Color.White,
                         modifier = Modifier.size(18.dp)
                     )
                 } else {
