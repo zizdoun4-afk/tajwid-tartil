@@ -19,7 +19,10 @@ import com.example.data.repository.QuranRepository
 import com.example.domain.companion.DailyCompanionRoutine
 import com.example.domain.companion.DailySmartAgenda
 import com.example.domain.companion.SmartCompanionEngine
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,6 +62,8 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
     private val memorizationRepository = MemorizationRepository(memorizationDao)
     private val quranRepository = QuranRepository(quranCacheDao, application)
     private val prefsRepository = UserPreferencesRepository(application)
+
+    private val cleanupScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val recorderEngine: QuranRecorderEngine = QuranRecorderEngineImpl(application)
     val audioPlayer = AudioPlayer(application)
@@ -547,7 +552,7 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
         stopAudio()
         audioPlayer.release()
         sampleCollectorJob?.cancel()
-        viewModelScope.launch {
+        cleanupScope.launch {
             recorderEngine.discardTake()
             recorderEngine.discardSession()
         }
