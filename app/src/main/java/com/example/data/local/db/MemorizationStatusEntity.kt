@@ -16,8 +16,21 @@ data class MemorizationStatusEntity(
     val status: String = MemorizationStatus.NEW.name,
     val lastReviewedAtEpochMillis: Long? = null,
     val nextReviewDueEpochMillis: Long? = null,
-    val reviewCount: Int = 0
+    val reviewCount: Int = 0,
+    val successfulTests: Int = 0,
+    val failedTests: Int = 0,
+    val trainingAttempts: Int = 0
 ) {
     val memorizationStatus: MemorizationStatus
         get() = MemorizationStatus.fromString(status)
+
+    val isWeak: Boolean
+        get() = failedTests > 0 && failedTests >= successfulTests
+
+    val isStrong: Boolean
+        get() = successfulTests >= 3 && failedTests == 0
+
+    fun isOverdue(nowMillis: Long = System.currentTimeMillis()): Boolean {
+        return nextReviewDueEpochMillis != null && nextReviewDueEpochMillis <= nowMillis
+    }
 }

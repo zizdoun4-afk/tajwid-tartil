@@ -1,174 +1,763 @@
-# Audit consolidé — Tajwid & Tartil
-> Document préparé pour être donné tel quel à Gemini (AI Studio) comme spec d'implémentation.
-> Source : analyse du code réel (zip uploadé) + idée produit "Hifz/Mémorisation" proposée en discussion.
+# MASTER PRODUCT UPGRADE
+
+## TAJWID & TARTIL → رفيق القرآن
+
+The current application has completed the first 5 implementation phases and the final QA corrections.
+
+Now move from **functional application** to **premium product**.
+
+Do not be conservative about adding the following features.
+The goal is to make the application feel like a serious, polished Quran companion rather than a collection of screens.
 
 ---
 
-## 0. Résumé exécutif
+# PRODUCT VISION
 
-L'app a déjà un excellent socle technique (lecteur audio, moteur d'enregistrement Take/Session, cache Room, bibliothèque). Elle manque une couche produit : la **mémorisation** (Hifz). Avant d'ajouter cette couche, **6 bugs/dettes techniques doivent être corrigés**, sinon la nouvelle fonctionnalité va hériter des mêmes failures.
+Transform:
 
-Ordre d'exécution recommandé pour Gemini :
-1. Corriger les bugs critiques (section 1)
-2. Nettoyer le code mort / dette (section 2)
-3. Implémenter la couche Mémorisation (section 3) — additive, ne touche pas au Reader existant
-4. Nouvel onglet "حفظي" + dashboard (section 4)
+**Tajwid & Tartil**
 
----
+into:
 
-## 1. Bugs critiques à corriger EN PREMIER
+# رفيق القرآن
 
-### 1.1 `AyahReaderViewModel.onCleared()` — fuite ressource audio
-Fichier : `app/src/main/java/com/example/ui/ayahreader/AyahReaderViewModel.kt`
+## Rafiq Al-Quran
 
-```kotlin
-override fun onCleared() {
-    super.onCleared()
-    audioPlayer.release()
-    viewModelScope.launch {   // ❌ viewModelScope déjà annulé ici, ce bloc ne s'exécute quasiment jamais
-        quranRecorderEngine.discardTake()
-        quranRecorderEngine.discardSession()
-    }
-}
-```
-**Impact** : si l'utilisateur quitte l'écran pendant un enregistrement (Take ou Session), le `MediaRecorder` n'est jamais arrêté/libéré proprement → fichier temp orphelin, micro potentiellement bloqué pour l'écran suivant.
+Core experience:
 
-**Fix attendu** : utiliser un scope indépendant qui survit à `onCleared()` (ex: `CoroutineScope(SupervisorJob() + Dispatchers.Default)` dédié au cleanup), ou rendre `discardTake()`/`discardSession()` appelables de façon synchrone/bloquante pour ce cas précis.
+**Read → Listen → Recite → Record → Memorize → Review → Improve**
 
-### 1.2 Double persistance divergente (JSON + Room)
-Fichiers : `RecitationsStore.kt`, `RecordingRepository.kt`, `AyahReaderViewModel.kt`
-
-`RecitationsStore.saveAyahRecording()` / `saveSessionRecording()` écrit dans **deux systèmes** :
-- son propre index `index.json` (`filesDir/recitations/`)
-- puis un sync manuel vers `RecordingDao` (Room), avec un chemin de fichier recalculé séparément
-
-**Impact** : si un des deux writes échoue (crash, stockage plein), le Reader (JSON) et la Bibliothèque (Room) divergent — un enregistrement visible dans l'un, absent dans l'autre.
-
-**Fix attendu** : Room devient l'unique source de vérité. `RecitationsStore` ne garde que des helpers de fichiers (chemins, copie audio), plus d'index JSON parallèle. Les `markers` de session (liste `SessionMarker`) deviennent une colonne JSON dans `RecordingEntity` via un `TypeConverter` Room (Moshi), pas un fichier séparé.
-
-### 1.3 `fallbackToDestructiveMigration()` sur la DB
-Fichier : `AppDatabase.kt`, actuellement `version = 1`
-
-**Impact** : dès qu'un futur changement de schéma est nécessaire (ex: pour la mémorisation, section 3), Room **supprime toute la table `recordings`** au prochain lancement → perte de la bibliothèque utilisateur, fichiers `.m4a` orphelins sur disque.
-
-**Fix attendu** : avant tout ajout de table/colonne, remplacer par une vraie stratégie de `Migration` Room (même simple, `ADD COLUMN`).
-
-### 1.4 `RecitationStyle.fallbackFolder` jamais branché
-Fichier : `RecitationStyle.kt` — le champ existe (`fallbackFolder = "Abdul_Basit_Murattal_64kbps"`) mais grep confirme **zéro usage** dans le code.
-
-**Fix attendu** : dans `AudioPlayer`/`AyahReaderViewModel`, si le stream réseau échoue (`PlayerState.Error`), retenter automatiquement avec l'URL construite via `fallbackFolder` avant d'afficher une erreur à l'utilisateur.
-
-### 1.5 `markNextAyahInSession()` — verset final silencieux
-Fichier : `AyahReaderViewModel.kt`
-
-```kotlin
-fun markNextAyahInSession() {
-    val currentIndex = _uiState.value.currentAyahIndex
-    if (currentIndex < ayahs.size - 1) { ... }
-    // sinon : rien ne se passe, aucun feedback
-}
-```
-**Impact** : si l'utilisateur est sur le dernier verset de la sourate pendant une Session et tape "verset suivant", rien ne se passe sans message.
-
-**Fix attendu** : afficher un message ("Fin de la sourate — arrêtez la session") ou déclencher automatiquement `requestStopSession()`.
-
-### 1.6 Code mort : `AudioRecorder.kt`
-Jamais instancié nulle part (`QuranRecorderEngine` fait tout le travail réel d'enregistrement).
-
-**Fix attendu** : supprimer le fichier entièrement pour éviter la confusion avec `QuranRecorderEngine`.
+The application should feel coherent, calm, premium, intelligent and useful every day.
 
 ---
 
-## 2. Dette technique secondaire (non bloquante, à faire si le temps permet)
+# NON-NEGOTIABLE RULES
 
-- `QuranRepository.DEFAULT_SURAHS` : liste statique de 114 sourates codée en dur dans le `.kt` → déplacer vers `assets/surahs.json` chargé au premier lancement, plus facile à maintenir.
-- `RecitationsStore.generateRandomId()` : génère un ID sur 10 caractères sans vérifier l'unicité contre les IDs existants — collision improbable mais non garantie. Utiliser `UUID.randomUUID()`.
+* Preserve all currently working functionality.
+* Reuse existing architecture whenever possible.
+* Do not duplicate Room/database sources of truth.
+* Do not invent Quranic content.
+* Do not generate Quran text with AI.
+* Do not fabricate Tajwid rules.
+* Do not fake voice analysis capabilities.
+* AI must remain optional and only use verified application data.
+* Maintain Arabic / French / English.
+* Maintain RTL.
+* Maintain offline functionality where currently possible.
+* Maintain responsive phone/tablet layouts.
+* Avoid unnecessary dependencies.
+* Do not create features that exist only visually without real functionality.
 
----
-
-## 3. Nouvelle fonctionnalité : Mémorisation (Hifz) — idée validée
-
-**Principe général** (reprend l'idée proposée en discussion) : ne pas construire un nouvel "assistant Coran" séparé. Ajouter une couche de mémorisation **par-dessus** l'existant, sans casser le Reader/Recorder actuels.
-
-### 3.1 Modèle de données (additif, nécessite la Migration Room de la section 1.3)
-
-```kotlin
-enum class MemorizationStatus { NEW, LEARNING, REVIEW, MEMORIZED }
-
-@Entity(tableName = "memorization_status")
-data class MemorizationStatusEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val surahNumber: Int,
-    val ayahNumber: Int,
-    val status: String,              // MemorizationStatus.name
-    val lastReviewedAtEpochMillis: Long? = null,
-    val nextReviewDueEpochMillis: Long? = null,   // pour une future répétition espacée
-    val reviewCount: Int = 0
-)
-```
-
-Dao : `getStatusForSurah(surahNumber)`, `upsertStatus(entity)`, `getDueForReview(nowMillis)`, `getWeeklyStats(sinceMillis)`.
-
-### 3.2 Point d'accroche dans le flow existant (non-intrusif)
-
-Dans `AyahReaderViewModel.stopTakeAndSave()`, **après** la sauvegarde réussie de l'enregistrement, déclencher un état UI :
-
-```
-"Ajouter ce verset à ma révision ?"   [Oui]   [Plus tard]
-```
-
-Si "Oui" → `upsertStatus(surah, ayah, status = LEARNING)`. Aucune modification du comportement actuel si l'utilisateur ignore le prompt.
-
-### 3.3 Session de training orchestrée (réutilise le moteur audio existant)
-
-Nouvel écran `TrainingSessionScreen` qui enchaîne, pour un verset donné :
-1. Écoute du récitateur référence ×3 (réutilise `AudioPlayer` + `RepeatMode`)
-2. Lecture accompagnée (affichage texte + audio simultané)
-3. Enregistrement (réutilise `QuranRecorderEngine.startTake()`)
-4. Réécoute de son propre enregistrement (réutilise `audioPlayer.togglePlayPause()`)
-5. Test sans regarder le texte (masquer le texte arabe, afficher seulement après validation)
-
-→ Aucun nouveau moteur audio/enregistrement à écrire, uniquement de l'orchestration UI au-dessus de l'existant.
-
-### 3.4 États par verset dans le Reader
-
-Dans `AyahReaderScreen`, indicateur visuel par verset basé sur `MemorizationStatus` (ex: pastille de couleur), en plus du `recordedAyahMap` déjà existant pour les enregistrements.
+Implement the roadmap progressively.
 
 ---
 
-## 4. Nouvel onglet "حفظي" (Ma mémorisation)
+# PHASE 1 — SMART HIFZ ENGINE
 
-Navigation actuelle (à confirmer dans `MainScreen.kt`) : Sourates / Bibliothèque / Réglages.
-Ajouter un 3ᵉ onglet (pas 5), pour ne pas surcharger la bottom nav :
+Upgrade the current Hifz system into a real memorization assistant.
 
-```
-📖 القرآن (existant)
-🎙️ تلاوتي (Bibliothèque, existant)
-🧠 حفظي (NOUVEAU)
-```
+## 1. Adaptive Spaced Repetition
 
-Contenu de l'onglet "حفظي" :
-- **Suivi du jour** : versets à réviser aujourd'hui (`getDueForReview`)
-- **Mes sourates** : progression % par sourate (mémorisés / total ayahs)
-- **Révision** : liste des versets en status REVIEW
-- **Test** : mode masqué (réutilise 3.3 étape 5)
-- **Progrès** : stats hebdo — versets révisés, nouveaux versets, nombre de sessions training, minutes de récitation cumulées (agrégation de `RecordingEntity.durationMs` + `MemorizationStatusEntity`)
+Improve the current review scheduling.
 
-Réglages (`SettingsScreen.kt`) reste indépendant, inchangé.
+Use real history:
+
+* reviewCount
+* successful tests
+* failed tests
+* lastReviewedAt
+* nextReviewDue
+* memorization status
+* training attempts
+
+The system should identify:
+
+* strong verses
+* weak verses
+* overdue verses
+* frequently failed verses
+
+Adjust future review dates accordingly.
+
+## 2. Daily Hifz Plan
+
+Create:
+
+**خطة اليوم / Today's Plan**
+
+Example:
+
+* 3 verses to review
+* 2 weak verses
+* 1 new verse
+
+The numbers must come from the user's actual settings/progress.
+
+Allow:
+
+* 1 verse/day
+* 3 verses/day
+* 5 verses/day
+* 10 verses/day
+* Custom
+
+## 3. Smart Review Queue
+
+Prioritize:
+
+1. overdue verses
+2. repeatedly failed verses
+3. verses approaching due date
+4. normal reviews
+5. new memorization
+
+## 4. Surah / Juz Progress
+
+Show:
+
+* memorized %
+* learning %
+* review %
+* remaining verses
+
+Allow opening directly into training.
+
+## 5. Hifz Dashboard
+
+Create a premium dashboard:
+
+* Today's plan
+* Due reviews
+* Weak verses
+* Memorized verses
+* Current streak
+* Weekly progress
+
+Use real database values only.
 
 ---
 
-## 5. IA (phase finale, hors scope immédiat)
+# PHASE 2 — SMART DAILY ROUTINE
 
-À ajouter **seulement** une fois les sections 1 à 4 stables et testées. Exemple d'usage ciblé plutôt que "IA pour faire IA" :
-> "Vous avez répété le verset 7 plusieurs fois cette semaine — voulez-vous le programmer pour révision demain ?"
+Make the application useful every day.
 
-Basé sur `reviewCount` / fréquence d'enregistrement déjà disponible dans les données du §3.1 — ne nécessite pas de modèle externe pour une première version, juste une règle heuristique sur les données existantes.
+## Daily Companion
+
+Create:
+
+# رفيق اليوم
+
+A daily routine generated from real progress.
+
+Example:
+
+### صباحاً
+
+Review overdue verses.
+
+### بعد ذلك
+
+Learn today's new verses.
+
+### مساءً
+
+Blind test.
+
+### قبل النوم
+
+Short revision session.
+
+The routine must adapt automatically to:
+
+* user's daily target
+* available memorized verses
+* overdue reviews
+* weak verses
+* recent activity
+
+## Quick Start
+
+The home/dashboard should offer:
+
+**ابدأ جلسة اليوم**
+
+One tap should start the highest-priority useful activity.
+
+## Session completion
+
+After completion:
+
+* update progress
+* update Hifz scheduling
+* update statistics
+* suggest next action
+
+Avoid unnecessary popups.
 
 ---
 
-## 6. Ce qu'il ne faut PAS toucher
+# PHASE 3 — TAJWID ACADEMY
 
-- `AudioPlayer.kt`, `QuranRecorderEngine.kt` : moteurs stables, à réutiliser tels quels (voir §3.3)
-- `QuranRepository`/API `alquran.cloud` : fonctionne, ne pas remplacer
-- Flow de lecture des sourates existant (`SurahListScreen`, navigation) : la mémorisation se greffe dessus, ne le remplace pas
+Transform Tajwid into a structured learning system.
+
+## Curriculum
+
+Organize:
+
+### Beginner
+
+* Makharij
+* Harakat
+* Madd basics
+* Noon Sakinah
+* Tanween
+* Qalqalah
+
+### Intermediate
+
+* Izhar
+* Idgham
+* Ikhfa
+* Iqlab
+* Madd categories
+* Waqf basics
+
+### Advanced
+
+* advanced rules
+* exceptions
+* detailed pronunciation
+* advanced Waqf
+
+Only use verified Tajwid content.
+
+## Lesson structure
+
+Every lesson:
+
+1. Explanation
+2. Quran example
+3. Highlight relevant letters
+4. Reference audio
+5. Repeat
+6. Exercise
+7. Completion
+
+## Exercises
+
+Add real exercises:
+
+* identify the rule
+* identify the letter
+* choose correct rule
+* listen and identify
+* guided repetition
+
+## Progress
+
+Track:
+
+* completed lessons
+* exercise accuracy
+* weak topics
+* current level
+
+## Quran integration
+
+From an ayah:
+
+**Tajwid points**
+
+should open the relevant lesson.
+
+From a Tajwid lesson:
+
+**Practice this in Quran**
+
+should open a valid Quran example.
+
+---
+
+# PHASE 4 — PROFESSIONAL QURAN JOURNEY
+
+Create one coherent progress experience.
+
+## Dashboard
+
+Show:
+
+### القرآن
+
+* verses read
+* listening time
+* last reading position
+
+### الحفظ
+
+* memorized verses
+* reviews
+* weak verses
+* progress by surah
+
+### التجويد
+
+* lessons completed
+* exercises
+* weak topics
+
+### التلاوة
+
+* recordings
+* practice time
+* sessions completed
+
+## Visual Journey
+
+Create a calm visual progression:
+
+**بدأت → أتعلم → أراجع → أتقن**
+
+Do not use childish gamification.
+
+Avoid excessive points, coins, badges or meaningless rewards.
+
+## Weekly / Monthly view
+
+Real statistics:
+
+* verses memorized
+* verses reviewed
+* sessions
+* recitation time
+* Tajwid lessons
+* active days
+
+Allow switching:
+
+**7 days / 30 days**
+
+---
+
+# PHASE 5 — ADVANCED VOICE & RAFIQ
+
+Only now improve the voice intelligence layer.
+
+## IMPORTANT
+
+The existing acoustic analyzer is NOT speech recognition.
+
+Do not pretend it can verify Quran words.
+
+### Level 1 — Acoustic Guidance
+
+Keep:
+
+* pacing
+* pauses
+* energy stability
+* recording quality
+
+Present results honestly.
+
+### Level 2 — Recitation Alignment
+
+If technically feasible, implement real alignment against the known Quran text.
+
+Potential capabilities:
+
+* detect likely missing words
+* detect likely repeated words
+* detect ayah position
+* estimate where the user deviated
+
+Every result must be presented as:
+
+**Possible mismatch**
+
+not:
+
+**Your Quran recitation is wrong.**
+
+### Level 3 — Tajwid Assistance
+
+Only implement if technically reliable.
+
+Potential feedback:
+
+* possible prolongation issue
+* possible pause issue
+* possible pronunciation area to review
+
+Never issue definitive religious judgments.
+
+## Privacy
+
+Voice analysis should preferably happen locally.
+
+If external processing is ever introduced:
+
+* make it explicit
+* obtain user consent
+* explain data handling
+* provide an offline alternative where possible
+
+---
+
+# PHASE 6 — RAFIQ INTELLIGENT COMPANION
+
+Now connect all existing systems.
+
+Rafiq should understand the user's actual application state.
+
+Examples:
+
+> ماذا أراجع اليوم؟
+
+Answer from Room:
+
+* overdue verses
+* weak verses
+* current plan
+
+---
+
+> شنو خاصني نحفظ اليوم؟
+
+Return the actual planned verses.
+
+---
+
+> فين ضعيف؟
+
+Identify weak verses from real history.
+
+---
+
+> بغيت نقرا شوية.
+
+Start an appropriate Quran reading session.
+
+---
+
+> بغيت نراجع الحفظ.
+
+Start the review queue.
+
+The assistant should be an **orchestrator of the application**, not a generic chatbot.
+
+---
+
+# PHASE 7 — HUMAN TEACHER MODE
+
+Add optional teacher-assisted review.
+
+## Share Recording
+
+User can share/export a recording with:
+
+* Surah
+* Ayah
+* date
+* recording
+
+## Teacher feedback
+
+If a future backend is introduced, support:
+
+* teacher comment
+* correction
+* reviewed status
+* history
+
+Do NOT implement a complex social network.
+
+Keep this feature optional and modular.
+
+---
+
+# PHASE 8 — OFFLINE-FIRST & BACKUP
+
+Strengthen reliability.
+
+## Offline
+
+The following should remain available offline where data exists locally:
+
+* Quran
+* Hifz
+* Tajwid lessons
+* training
+* recordings
+* statistics
+
+## Backup
+
+Create optional local/export backup for:
+
+* Hifz progress
+* bookmarks
+* settings
+* memorization history
+* statistics
+
+Do NOT upload recordings or personal data automatically.
+
+Cloud synchronization is optional future infrastructure.
+
+---
+
+# PHASE 9 — PREMIUM UX POLISH
+
+This phase is essential.
+
+The application must look professionally designed.
+
+## Design principles
+
+* calm
+* Islamic
+* modern
+* premium
+* minimal
+* readable
+* spacious
+
+Avoid:
+
+* excessive cards
+* excessive borders
+* excessive animations
+* visual noise
+* unnecessary gradients
+* childish gamification
+
+## Navigation
+
+Keep navigation simple.
+
+Primary destinations should remain approximately:
+
+**القرآن | تلاوتي | حفظي**
+
+Settings remains secondary.
+
+Rafiq should not create unnecessary navigation complexity.
+
+## Micro-interactions
+
+Add subtle:
+
+* progress animations
+* successful completion feedback
+* recording state
+* review completion
+* smooth transitions
+
+Animations must never slow down the user.
+
+---
+
+# PHASE 10 — FINAL PRODUCT QUALITY
+
+Perform a complete product audit.
+
+## Functional
+
+Verify:
+
+* Quran
+* audio
+* recording
+* library
+* Hifz
+* training
+* Tajwid
+* Rafiq
+* statistics
+* reminders
+* backup/export
+
+## Technical
+
+Verify:
+
+* Room integrity
+* migrations
+* lifecycle
+* audio cleanup
+* recording cleanup
+* no duplicate persistence
+* no orphan files
+* no memory leaks
+* no crashes
+
+## UX
+
+Verify:
+
+* Arabic
+* French
+* English
+* RTL
+* dark/light
+* small phones
+* large phones
+* tablets
+* portrait
+* landscape
+
+## Performance
+
+Verify:
+
+* startup
+* Quran scrolling
+* audio transitions
+* recording
+* Room queries
+* dashboard loading
+
+## Tests
+
+Run:
+
+```text
+./gradlew testDebugUnitTest
+./gradlew assembleDebug
+```
+
+Add meaningful tests for every new business rule.
+
+Do not modify tests simply to obtain green results.
+
+---
+
+# IMPLEMENTATION ORDER
+
+Execute:
+
+**PHASE 1**
+Smart Hifz
+
+↓
+
+**VERIFY**
+
+↓
+
+**PHASE 2**
+Smart Daily Routine
+
+↓
+
+**VERIFY**
+
+↓
+
+**PHASE 3**
+Tajwid Academy
+
+↓
+
+**VERIFY**
+
+↓
+
+**PHASE 4**
+Quran Journey
+
+↓
+
+**VERIFY**
+
+↓
+
+**PHASE 5**
+Advanced Voice
+
+↓
+
+**VERIFY**
+
+↓
+
+**PHASE 6**
+Rafiq Companion
+
+↓
+
+**VERIFY**
+
+↓
+
+**PHASE 7**
+Teacher Mode
+
+↓
+
+**VERIFY**
+
+↓
+
+**PHASE 8**
+Offline / Backup
+
+↓
+
+**VERIFY**
+
+↓
+
+**PHASE 9**
+Premium UX
+
+↓
+
+**VERIFY**
+
+↓
+
+**PHASE 10**
+Final QA
+
+---
+
+# IMPORTANT EXECUTION RULE
+
+Do not stop after creating a screen.
+
+For every feature:
+
+**Database → Repository → ViewModel → UI → Navigation → real user flow → tests**
+
+must be connected.
+
+No placeholder functionality.
+
+No fake data.
+
+No dead screens.
+
+No unused architecture.
+
+No unnecessary refactoring.
+
+---
+
+# FINAL PRODUCT STANDARD
+
+At the end, the application should no longer feel like:
+
+“Quran reader + recorder + Hifz feature.”
+
+It should feel like:
+
+# رفيق القرآن
+
+A coherent personal Quran companion that helps the user:
+
+**اقرأ → اسمع → رتّل → سجّل → احفظ → راجع → حسّن تلاوتك**
+
+The goal is not maximum number of features.
+
+The goal is **maximum usefulness, coherence and polish**.

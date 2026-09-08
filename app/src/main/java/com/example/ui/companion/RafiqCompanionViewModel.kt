@@ -15,6 +15,7 @@ import com.example.data.local.db.AppDatabase
 import com.example.data.local.db.MemorizationStatusEntity
 import com.example.data.repository.MemorizationRepository
 import com.example.data.repository.QuranRepository
+import com.example.domain.companion.DailyCompanionRoutine
 import com.example.domain.companion.DailySmartAgenda
 import com.example.domain.companion.SmartCompanionEngine
 import kotlinx.coroutines.Job
@@ -42,6 +43,13 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
     // Smart Agenda
     private val _agenda = MutableStateFlow<DailySmartAgenda?>(null)
     val agenda: StateFlow<DailySmartAgenda?> = _agenda.asStateFlow()
+
+    // Smart Daily Companion Routine
+    private val _dailyRoutine = MutableStateFlow<DailyCompanionRoutine?>(null)
+    val dailyRoutine: StateFlow<DailyCompanionRoutine?> = _dailyRoutine.asStateFlow()
+
+    private val _nextActionSuggestion = MutableStateFlow<String?>(null)
+    val nextActionSuggestion: StateFlow<String?> = _nextActionSuggestion.asStateFlow()
 
     // Smart Session Queue
     private val _sessionQueue = MutableStateFlow<List<MemorizationStatusEntity>>(emptyList())
@@ -96,6 +104,12 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
                 tajwidProgressDao = tajwidProgressDao
             )
             _agenda.value = smartAgenda
+
+            val routine = SmartCompanionEngine.computeDailyRoutine(
+                memorizationDao = memorizationDao
+            )
+            _dailyRoutine.value = routine
+            _nextActionSuggestion.value = routine.nextActionSuggestionFr
 
             // If queue is empty, populate from due or weak
             if (_sessionQueue.value.isEmpty()) {
@@ -264,11 +278,7 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
             val surah = _currentSurahNumber.value
             val ayah = _currentAyahNumber.value
 
-            if (isMastered) {
-                memorizationRepository.markMemorized(surah, ayah)
-            } else {
-                memorizationRepository.setAyahStatus(surah, ayah, com.example.domain.model.MemorizationStatus.REVIEW)
-            }
+            memorizationRepository.recordTestResult(surah, ayah, isMastered)
 
             // Reload agenda stats
             loadAgenda()

@@ -221,8 +221,8 @@ class TrainingSessionViewModel(
     fun validateBlindTest(succeeded: Boolean) {
         viewModelScope.launch {
             audioPlayer.stop()
+            val updated = memorizationRepository.recordTestResult(surahNumber, ayahNumber, succeeded)
             if (succeeded) {
-                val updated = memorizationRepository.markMemorized(surahNumber, ayahNumber)
                 persistRecordingIfAvailable()
                 _uiState.value = _uiState.value.copy(
                     isSessionCompleted = true,
@@ -230,7 +230,6 @@ class TrainingSessionViewModel(
                     isTextRevealed = true
                 )
             } else {
-                val updated = memorizationRepository.markReviewed(surahNumber, ayahNumber)
                 _uiState.value = _uiState.value.copy(
                     isSessionCompleted = false,
                     status = updated.memorizationStatus,

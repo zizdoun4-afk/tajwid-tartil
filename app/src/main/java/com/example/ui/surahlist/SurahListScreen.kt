@@ -69,6 +69,7 @@ fun SurahListScreen(
     onSurahClick: (Int) -> Unit,
     onContinueReadingClick: ((Int) -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null,
+    onDailyRoutineClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -182,6 +183,25 @@ fun SurahListScreen(
                                     onContinueReadingClick?.invoke(cr.surahNumber)
                                         ?: onSurahClick(cr.surahNumber)
                                 },
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Daily Rafiq Routine banner — only when no active search
+                if (onDailyRoutineClick != null) {
+                    item(key = "daily_routine_card") {
+                        AnimatedVisibility(
+                            visible = uiState.searchQuery.isBlank(),
+                            enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+                            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
+                        ) {
+                            DailyRafiqBannerCard(
+                                title = strings.rafiqHomeCardTitle,
+                                subtitle = strings.rafiqHomeCardSubtitle,
+                                buttonLabel = strings.rafiqQuickStartToday,
+                                onClick = onDailyRoutineClick,
                                 modifier = Modifier.padding(bottom = 4.dp)
                             )
                         }
@@ -416,3 +436,80 @@ private fun androidx.compose.ui.text.AnnotatedString.Builder.highlightSubstring(
         start = idx + query.length
     }
 }
+
+@Composable
+fun DailyRafiqBannerCard(
+    title: String,
+    subtitle: String,
+    buttonLabel: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .testTag("daily_rafiq_banner_card"),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🌟", fontSize = 20.sp)
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.secondary
+            ) {
+                Text(
+                    text = buttonLabel,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondary
+                )
+            }
+        }
+    }
+}
+

@@ -47,4 +47,16 @@ interface MemorizationDao {
 
     @Query("SELECT * FROM memorization_status")
     fun getAllStatusesFlow(): Flow<List<MemorizationStatusEntity>>
+
+    @Query("SELECT * FROM memorization_status WHERE failedTests > 0 AND failedTests >= successfulTests ORDER BY failedTests DESC")
+    fun getWeakVersesFlow(): Flow<List<MemorizationStatusEntity>>
+
+    @Query("SELECT * FROM memorization_status WHERE failedTests > 0 AND failedTests >= successfulTests ORDER BY failedTests DESC")
+    suspend fun getWeakVerses(): List<MemorizationStatusEntity>
+
+    @Query("SELECT * FROM memorization_status WHERE failedTests >= :minFails ORDER BY failedTests DESC")
+    fun getFrequentlyFailedVerses(minFails: Int = 2): Flow<List<MemorizationStatusEntity>>
+
+    @Query("SELECT * FROM memorization_status WHERE nextReviewDueEpochMillis > :windowStart AND nextReviewDueEpochMillis <= :windowEnd ORDER BY nextReviewDueEpochMillis ASC")
+    fun getVersesApproachingDue(windowStart: Long, windowEnd: Long): Flow<List<MemorizationStatusEntity>>
 }

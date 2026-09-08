@@ -151,6 +151,9 @@ fun MainScreen(
                     },
                     onSettingsClick = {
                         navController.navigate(BottomNavRoute.Settings.route)
+                    },
+                    onDailyRoutineClick = {
+                        navController.navigate("rafiq")
                     }
                 )
             }
@@ -330,6 +333,14 @@ fun MainScreen(
                     },
                     onNavigateToTajwidLesson = { lessonId ->
                         navController.navigate("tajwid_lesson/$lessonId")
+                    },
+                    onStartTraining = { surahNum, ayahNum, initialStep ->
+                        val route = if (initialStep != null) {
+                            "training/$surahNum/$ayahNum?step=$initialStep"
+                        } else {
+                            "training/$surahNum/$ayahNum"
+                        }
+                        navController.navigate(route)
                     },
                     viewModel = rafiqViewModel
                 )

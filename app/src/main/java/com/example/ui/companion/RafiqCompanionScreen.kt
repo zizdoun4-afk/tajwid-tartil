@@ -28,6 +28,11 @@ import com.example.ui.i18n.AppStrings
 import com.example.ui.i18n.LocalAppLanguage
 import com.example.ui.theme.QuranTextTypography
 
+import com.example.domain.companion.DailyCompanionRoutine
+import com.example.domain.companion.DailyRoutinePeriod
+import com.example.domain.companion.DailyRoutineStep
+import com.example.domain.companion.RoutineStepType
+
 enum class RafiqTab {
     SMART_SESSION,
     QUICK_ANALYSIS,
@@ -40,6 +45,7 @@ fun RafiqCompanionScreen(
     strings: AppStrings,
     onBackClick: () -> Unit,
     onNavigateToTajwidLesson: ((String) -> Unit)? = null,
+    onStartTraining: ((surah: Int, ayah: Int, initialStep: String?) -> Unit)? = null,
     viewModel: RafiqCompanionViewModel = viewModel()
 ) {
     var selectedTab by remember { mutableStateOf(RafiqTab.SMART_SESSION) }
@@ -48,6 +54,8 @@ fun RafiqCompanionScreen(
     val agenda by viewModel.agenda.collectAsState()
     val sessionQueue by viewModel.sessionQueue.collectAsState()
     val queueIndex by viewModel.currentQueueIndex.collectAsState()
+    val dailyRoutine by viewModel.dailyRoutine.collectAsState()
+    val nextActionSuggestion by viewModel.nextActionSuggestion.collectAsState()
 
     val currentSurah by viewModel.currentSurahNumber.collectAsState()
     val currentAyah by viewModel.currentAyahNumber.collectAsState()
@@ -129,6 +137,45 @@ fun RafiqCompanionScreen(
             ) {
                 when (selectedTab) {
                     RafiqTab.SMART_SESSION -> {
+                        // Smart Daily Routine Card (Rafiq Al-Youm)
+                        dailyRoutine?.let { routine ->
+                            DailyCompanionRoutineCard(
+                                routine = routine,
+                                nextActionSuggestion = nextActionSuggestion,
+                                strings = strings,
+                                currentLanguage = currentLanguage,
+                                onStartStep = { step ->
+                                    if (onStartTraining != null) {
+                                        val stepName = when (step.stepType) {
+                                            RoutineStepType.REVIEW_OVERDUE -> null
+                                            RoutineStepType.LEARN_NEW -> null
+                                            RoutineStepType.BLIND_TEST -> "BLIND_TEST"
+                                            RoutineStepType.NIGHT_REVISION -> null
+                                        }
+                                        onStartTraining(step.targetSurah, step.targetAyah, stepName)
+                                    } else {
+                                        viewModel.selectAyah(step.targetSurah, step.targetAyah)
+                                    }
+                                },
+                                onQuickStart = {
+                                    val targetStep = routine.steps.firstOrNull { !it.isCompleted } ?: routine.steps.firstOrNull()
+                                    if (targetStep != null) {
+                                        if (onStartTraining != null) {
+                                            val stepName = when (targetStep.stepType) {
+                                                RoutineStepType.REVIEW_OVERDUE -> null
+                                                RoutineStepType.LEARN_NEW -> null
+                                                RoutineStepType.BLIND_TEST -> "BLIND_TEST"
+                                                RoutineStepType.NIGHT_REVISION -> null
+                                            }
+                                            onStartTraining(targetStep.targetSurah, targetStep.targetAyah, stepName)
+                                        } else {
+                                            viewModel.selectAyah(targetStep.targetSurah, targetStep.targetAyah)
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
                         // Spiritual motivation banner
                         Surface(
                             shape = RoundedCornerShape(16.dp),
@@ -682,3 +729,201 @@ fun RafiqCompanionScreen(
         }
     }
 }
+
+@Composable
+fun DailyCompanionRoutineCard(
+    routine: DailyCompanionRoutine,
+    nextActionSuggestion: String?,
+    strings: AppStrings,
+    currentLanguage: AppLanguage,
+    onStartStep: (DailyRoutineStep) -> Unit,
+    onQuickStart: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val periodIcon = when (routine.currentPeriod) {
+        DailyRoutinePeriod.MORNING -> "🌅"
+        DailyRoutinePeriod.DAYTIME -> "☀️"
+        DailyRoutinePeriod.EVENING -> "🌇"
+        DailyRoutinePeriod.BEDTIME -> "🌙"
+    }
+    val periodTitle = when (routine.currentPeriod) {
+        DailyRoutinePeriod.MORNING -> strings.rafiqPeriodMorning
+        DailyRoutinePeriod.DAYTIME -> strings.rafiqPeriodDaytime
+        DailyRoutinePeriod.EVENING -> strings.rafiqPeriodEvening
+        DailyRoutinePeriod.BEDTIME -> strings.rafiqPeriodBedtime
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header: Icon + Routine Title + Period badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(periodIcon, fontSize = 22.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = strings.rafiqRoutineTitle,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = strings.rafiqRoutineSubtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Text(
+                        text = periodTitle,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Steps list
+            routine.steps.forEachIndexed { index, step ->
+                val stepTitle = when (currentLanguage) {
+                    AppLanguage.ARABIC -> step.titleAr
+                    AppLanguage.ENGLISH -> step.titleEn.ifBlank { step.titleFr }
+                    else -> step.titleFr
+                }
+                val stepDesc = when (currentLanguage) {
+                    AppLanguage.ARABIC -> step.descriptionAr
+                    AppLanguage.ENGLISH -> step.descriptionEn.ifBlank { step.descriptionFr }
+                    else -> step.descriptionFr
+                }
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clickable(enabled = step.targetSurah > 0) {
+                            onStartStep(step)
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (step.isCompleted) {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                    },
+                    border = if (!step.isCompleted && index == routine.steps.indexOfFirst { !it.isCompleted }) {
+                        androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                    } else null
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (step.isCompleted) "✓" else "${index + 1}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (step.isCompleted) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stepTitle,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = stepDesc,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (step.isCompleted) {
+                                Color(0xFF2E7D32).copy(alpha = 0.15f)
+                            } else {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                            }
+                        ) {
+                            Text(
+                                text = if (step.isCompleted) strings.rafiqStepCompleted else strings.rafiqStepCurrent,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (step.isCompleted) Color(0xFF2E7D32) else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Next Action Banner
+            if (!nextActionSuggestion.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("💡", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = strings.rafiqNextActionTitle,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            Text(
+                                text = nextActionSuggestion,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Quick Start Button
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = onQuickStart,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text(
+                    text = strings.rafiqQuickStartToday,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+

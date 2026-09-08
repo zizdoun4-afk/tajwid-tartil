@@ -72,6 +72,25 @@ class FakeMemorizationDao : MemorizationDao {
     override fun getAllStatusesFlow(): Flow<List<MemorizationStatusEntity>> {
         return flowOf(items)
     }
+
+    override fun getWeakVersesFlow(): Flow<List<MemorizationStatusEntity>> {
+        return flowOf(items.filter { it.failedTests > 0 && it.failedTests >= it.successfulTests })
+    }
+
+    override suspend fun getWeakVerses(): List<MemorizationStatusEntity> {
+        return items.filter { it.failedTests > 0 && it.failedTests >= it.successfulTests }
+    }
+
+    override fun getFrequentlyFailedVerses(minFails: Int): Flow<List<MemorizationStatusEntity>> {
+        return flowOf(items.filter { it.failedTests >= minFails })
+    }
+
+    override fun getVersesApproachingDue(windowStart: Long, windowEnd: Long): Flow<List<MemorizationStatusEntity>> {
+        return flowOf(items.filter {
+            val due = it.nextReviewDueEpochMillis ?: Long.MAX_VALUE
+            due > windowStart && due <= windowEnd
+        })
+    }
 }
 
 class FakeTajwidDao : TajwidProgressDao {
@@ -211,4 +230,103 @@ class SmartCompanionEngineTest {
         assertEquals(MemorizationStatus.REVIEW, updated?.memorizationStatus)
         assertTrue(updated?.memorizationStatus != MemorizationStatus.MEMORIZED)
     }
+
+    @Test
+    fun `test computeDailyRoutine returns 4 steps`() = runTest {
+        val now = System.currentTimeMillis()
+        val routine = SmartCompanionEngine.computeDailyRoutine(
+            memorizationDao = memDao,
+            dailyTarget = 3,
+            currentTimeMillis = now
+        )
+        assertEquals(4, routine.steps.size)
+    }
+
+    @Test
+    fun `test computeDailyRoutine period detection morning`() {
+        // 7 AM
+        val calendar = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 7)
+        }
+        val period = SmartCompanionEngine.determinePeriod(calendar.timeInMillis)
+        assertEquals(com.example.domain.companion.DailyRoutinePeriod.MORNING, period)
+    }
+
+    @Test
+    fun `test computeDailyRoutine period detection evening`() {
+        // 7 PM
+        val calendar = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 19)
+        }
+        val period = SmartCompanionEngine.determinePeriod(calendar.timeInMillis)
+        assertEquals(com.example.domain.companion.DailyRoutinePeriod.EVENING, period)
+    }
+
+    @Test
+    fun `test computeDailyRoutine period detection bedtime`() {
+        // 11 PM
+        val calendar = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 23)
+        }
+        val period = SmartCompanionEngine.determinePeriod(calendar.timeInMillis)
+        assertEquals(com.example.domain.companion.DailyRoutinePeriod.BEDTIME, period)
+    }
+
+    @Test
+    fun `test computeDailyRoutine quickStartStep is first uncompleted step`() = runTest {
+        val now = System.currentTimeMillis()
+        val routine = SmartCompanionEngine.computeDailyRoutine(
+            memorizationDao = memDao,
+            currentTimeMillis = now
+        )
+        val quickStart = routine.quickStartStep
+        assertNotNull(quickStart)
+        // Quick start should not be completed if any step is incomplete
+        val hasIncomplete = routine.steps.any { !it.isCompleted }
+        if (hasIncomplete) {
+            assertTrue(quickStart == null || !quickStart.isCompleted)
+        }
+    }
+
+    @Test
+    fun `test computeDailyRoutine nextActionSuggestion not empty`() = runTest {
+        val now = System.currentTimeMillis()
+        val routine = SmartCompanionEngine.computeDailyRoutine(
+            memorizationDao = memDao,
+            currentTimeMillis = now
+        )
+        assertTrue(routine.nextActionSuggestionFr.isNotBlank())
+        assertTrue(routine.nextActionSuggestionAr.isNotBlank())
+    }
+
+    @Test
+    fun `test computeDailyRoutine completionFraction is zero when no steps done`() = runTest {
+        val now = System.currentTimeMillis()
+        val routine = SmartCompanionEngine.computeDailyRoutine(
+            memorizationDao = memDao, // empty db
+            currentTimeMillis = now
+        )
+        assertEquals(0f, routine.completionFraction, 0.01f)
+    }
+
+    @Test
+    fun `test computeDailyRoutine with real overdue data sets morningStep`() = runTest {
+        val now = System.currentTimeMillis()
+        memDao.items.add(
+            MemorizationStatusEntity(
+                surahNumber = 2,
+                ayahNumber = 255,
+                status = MemorizationStatus.MEMORIZED.name,
+                nextReviewDueEpochMillis = now - 100_000L // overdue
+            )
+        )
+        val routine = SmartCompanionEngine.computeDailyRoutine(
+            memorizationDao = memDao,
+            currentTimeMillis = now
+        )
+        val morningStep = routine.steps.first()
+        assertEquals(2, morningStep.targetSurah)
+        assertEquals(255, morningStep.targetAyah)
+    }
 }
+

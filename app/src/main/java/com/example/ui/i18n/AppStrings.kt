@@ -270,8 +270,20 @@ interface AppStrings {
     val hifzPlanTarget1: String
     val hifzPlanTarget3: String
     val hifzPlanTarget5: String
+    val hifzPlanTarget10: String
     val hifzPlanTargetCustom: String
     val hifzPlanSetCustomTitle: String
+    val hifzStartTodaySession: String
+    val hifzStreakFormat: String
+    val hifzWeeklyReviewedFormat: String
+    val hifzTabSmartQueue: String
+    val hifzTabWeakVerses: String
+    val hifzTabJuz: String
+    val hifzSrsStrongLabel: String
+    val hifzSrsWeakLabel: String
+    val hifzSrsOverdueLabel: String
+    val hifzSrsInProgressLabel: String
+    val hifzRemainingVersesFormat: String
     val hifzReminderSettingsTitle: String
     val hifzReminderToggle: String
     val hifzReminderTimePrompt: String
@@ -356,6 +368,21 @@ interface AppStrings {
     val rafiqWeakVersesLabel: String
     val rafiqTotalMemorizedLabel: String
     val rafiqDailyGoalLabel: String
+
+    // Phase 2: Smart Daily Routine
+    val rafiqRoutineTitle: String
+    val rafiqRoutineSubtitle: String
+    val rafiqPeriodMorning: String
+    val rafiqPeriodDaytime: String
+    val rafiqPeriodEvening: String
+    val rafiqPeriodBedtime: String
+    val rafiqStepCompleted: String
+    val rafiqStepCurrent: String
+    val rafiqStepPending: String
+    val rafiqQuickStartToday: String
+    val rafiqNextActionTitle: String
+    val rafiqHomeCardTitle: String
+    val rafiqHomeCardSubtitle: String
 }
 
 object ArabicAppStrings : AppStrings {
@@ -608,11 +635,23 @@ object ArabicAppStrings : AppStrings {
     override val hifzPlanTitle = "الخطة اليومية للحفظ"
     override val hifzPlanTodayProgressFormat = "%d من %d آيات مكتملة اليوم"
     override val hifzPlanTargetFormat = "الهدف: %d آيات / يوم"
-    override val hifzPlanTarget1 = "آية واحدة / يوم"
+    override val hifzPlanTarget1 = "آية / يوم"
     override val hifzPlanTarget3 = "3 آيات / يوم"
     override val hifzPlanTarget5 = "5 آيات / يوم"
-    override val hifzPlanTargetCustom = "خطة مخصصة"
-    override val hifzPlanSetCustomTitle = "تحديد الهدف اليومي"
+    override val hifzPlanTarget10 = "10 آيات / يوم"
+    override val hifzPlanTargetCustom = "مخصص"
+    override val hifzPlanSetCustomTitle = "تحديد ورد الحفظ اليومي"
+    override val hifzStartTodaySession = "ابدأ جلسة اليوم"
+    override val hifzStreakFormat = "%d أيام متتالية"
+    override val hifzWeeklyReviewedFormat = "%d آية تمت مراجعتها هذا الأسبوع"
+    override val hifzTabSmartQueue = "قائمة المراجعة الذكية"
+    override val hifzTabWeakVerses = "آيات تحتاج تثبيت"
+    override val hifzTabJuz = "الأجزاء الثلاثون"
+    override val hifzSrsStrongLabel = "مثبت"
+    override val hifzSrsWeakLabel = "يحتاج تثبيت"
+    override val hifzSrsOverdueLabel = "متأخر"
+    override val hifzSrsInProgressLabel = "قيد المراجعة"
+    override val hifzRemainingVersesFormat = "متبقي %d آية"
     override val hifzReminderSettingsTitle = "تذكير الحفظ والمراجعة"
     override val hifzReminderToggle = "تفعيل التذكير اليومي"
     override val hifzReminderTimePrompt = "وقت التذكير اليومي"
@@ -696,6 +735,21 @@ object ArabicAppStrings : AppStrings {
     override val rafiqWeakVersesLabel = "آيات بحاجة لتثبيت:"
     override val rafiqTotalMemorizedLabel = "مجموع المحفوظ:"
     override val rafiqDailyGoalLabel = "الهدف اليومي المقترح:"
+
+    // Phase 2: Smart Daily Routine
+    override val rafiqRoutineTitle = "رفيق اليوم • الروتين القرآني"
+    override val rafiqRoutineSubtitle = "برنامج ذكي يرافقك حسب أوقات اليوم لتثبيت الحفظ والمراجعة"
+    override val rafiqPeriodMorning = "الفجر والصباح"
+    override val rafiqPeriodDaytime = "أثناء اليوم"
+    override val rafiqPeriodEvening = "المساء"
+    override val rafiqPeriodBedtime = "قبل النوم"
+    override val rafiqStepCompleted = "مكتمل ✓"
+    override val rafiqStepCurrent = "الحالي"
+    override val rafiqStepPending = "قادم"
+    override val rafiqQuickStartToday = "ابدأ جلسة اليوم ▶"
+    override val rafiqNextActionTitle = "الخطوة المقترحة الآن:"
+    override val rafiqHomeCardTitle = "رفيق اليوم • الورد اليومي"
+    override val rafiqHomeCardSubtitle = "مراجعة وتثبيت موجه طوال ساعات اليوم"
 }
 
 object FrenchAppStrings : AppStrings {
@@ -948,11 +1002,23 @@ object FrenchAppStrings : AppStrings {
     override val hifzPlanTitle = "Plan quotidien"
     override val hifzPlanTodayProgressFormat = "%d / %d versets travaillés aujourd'hui"
     override val hifzPlanTargetFormat = "Objectif : %d versets / jour"
-    override val hifzPlanTarget1 = "1 verset / jour"
-    override val hifzPlanTarget3 = "3 versets / jour"
-    override val hifzPlanTarget5 = "5 versets / jour"
+    override val hifzPlanTarget1 = "1 verset / j"
+    override val hifzPlanTarget3 = "3 versets / j"
+    override val hifzPlanTarget5 = "5 versets / j"
+    override val hifzPlanTarget10 = "10 versets / j"
     override val hifzPlanTargetCustom = "Personnalisé"
     override val hifzPlanSetCustomTitle = "Définir l'objectif quotidien"
+    override val hifzStartTodaySession = "Démarrer la séance d'aujourd'hui"
+    override val hifzStreakFormat = "%d jours consécutifs"
+    override val hifzWeeklyReviewedFormat = "%d versets révisés cette semaine"
+    override val hifzTabSmartQueue = "File de révision intelligente"
+    override val hifzTabWeakVerses = "Versets à renforcer"
+    override val hifzTabJuz = "Les 30 Ajzâ'"
+    override val hifzSrsStrongLabel = "Maîtrisé"
+    override val hifzSrsWeakLabel = "À renforcer"
+    override val hifzSrsOverdueLabel = "En retard"
+    override val hifzSrsInProgressLabel = "En cours"
+    override val hifzRemainingVersesFormat = "%d versets restants"
     override val hifzReminderSettingsTitle = "Rappels de mémorisation"
     override val hifzReminderToggle = "Activer le rappel quotidien"
     override val hifzReminderTimePrompt = "Heure du rappel"
@@ -1036,6 +1102,21 @@ object FrenchAppStrings : AppStrings {
     override val rafiqWeakVersesLabel = "Versets à consolider :"
     override val rafiqTotalMemorizedLabel = "Total mémorisés :"
     override val rafiqDailyGoalLabel = "Objectif quotidien suggéré :"
+
+    // Phase 2: Smart Daily Routine
+    override val rafiqRoutineTitle = "Rafiq du Jour • Routine Coranique"
+    override val rafiqRoutineSubtitle = "Programme intelligent adapté aux moments de votre journée"
+    override val rafiqPeriodMorning = "Matin (Fajr)"
+    override val rafiqPeriodDaytime = "En journée"
+    override val rafiqPeriodEvening = "Soirée"
+    override val rafiqPeriodBedtime = "Avant de dormir"
+    override val rafiqStepCompleted = "Terminé ✓"
+    override val rafiqStepCurrent = "En cours"
+    override val rafiqStepPending = "À venir"
+    override val rafiqQuickStartToday = "Démarrer la session ▶"
+    override val rafiqNextActionTitle = "Action recommandée :"
+    override val rafiqHomeCardTitle = "Rafiq du Jour • Routine Coranique"
+    override val rafiqHomeCardSubtitle = "Révisions et consolidation adaptées à votre journée"
 }
 
 fun getAppStrings(language: AppLanguage): AppStrings {

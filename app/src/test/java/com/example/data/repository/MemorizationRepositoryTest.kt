@@ -64,6 +64,25 @@ class FakeMemorizationDao : MemorizationDao {
         return flowOf(store.values.toList())
     }
 
+    override fun getWeakVersesFlow(): Flow<List<MemorizationStatusEntity>> {
+        return flowOf(store.values.filter { it.failedTests > 0 && it.failedTests >= it.successfulTests })
+    }
+
+    override suspend fun getWeakVerses(): List<MemorizationStatusEntity> {
+        return store.values.filter { it.failedTests > 0 && it.failedTests >= it.successfulTests }
+    }
+
+    override fun getFrequentlyFailedVerses(minFails: Int): Flow<List<MemorizationStatusEntity>> {
+        return flowOf(store.values.filter { it.failedTests >= minFails })
+    }
+
+    override fun getVersesApproachingDue(windowStart: Long, windowEnd: Long): Flow<List<MemorizationStatusEntity>> {
+        return flowOf(store.values.filter {
+            val due = it.nextReviewDueEpochMillis ?: Long.MAX_VALUE
+            due > windowStart && due <= windowEnd
+        })
+    }
+
     override suspend fun getWeeklyStats(sinceMillis: Long): List<MemorizationStatusEntity> {
         return store.values.filter { (it.lastReviewedAtEpochMillis ?: 0L) >= sinceMillis }
     }
@@ -145,6 +164,39 @@ class MemorizationRepositoryTest {
         // Subsequent review maintains MEMORIZED status
         val afterReview = repository.markReviewed(1, 1)
         assertEquals(MemorizationStatus.MEMORIZED.name, afterReview.status)
+    }
+
+    @Test
+    fun `recordTestResult failure contracts review interval and demotes status`() = runTest {
+        val memorized = repository.markMemorized(1, 1)
+        assertEquals(MemorizationStatus.MEMORIZED.name, memorized.status)
+
+        // Test failed
+        val failed = repository.recordTestResult(1, 1, succeeded = false)
+        assertEquals(MemorizationStatus.REVIEW.name, failed.status)
+        assertEquals(1, failed.failedTests)
+        assertTrue(failed.isWeak)
+
+        // Due tomorrow (within 24 hours + small margin)
+        val oneDayMs = 24L * 60 * 60 * 1000L
+        val diff = failed.nextReviewDueEpochMillis!! - System.currentTimeMillis()
+        assertTrue(diff in (oneDayMs - 2000L)..(oneDayMs + 2000L))
+    }
+
+    @Test
+    fun `recordTestResult consecutive successes expand intervals and promote to MEMORIZED`() = runTest {
+        // 3 consecutive successes
+        val t1 = repository.recordTestResult(1, 2, succeeded = true)
+        assertEquals(1, t1.successfulTests)
+
+        val t2 = repository.recordTestResult(1, 2, succeeded = true)
+        assertEquals(2, t2.successfulTests)
+
+        val t3 = repository.recordTestResult(1, 2, succeeded = true)
+        assertEquals(3, t3.successfulTests)
+        assertEquals(0, t3.failedTests)
+        assertTrue(t3.isStrong)
+        assertEquals(MemorizationStatus.MEMORIZED.name, t3.status)
     }
 
     @Test

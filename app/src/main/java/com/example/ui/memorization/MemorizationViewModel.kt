@@ -17,13 +17,34 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import com.example.domain.hifz.DailyHifzPlan
+import com.example.domain.hifz.JuzMemorizationProgress
+import com.example.domain.hifz.SmartHifzPlanner
+import com.example.domain.hifz.SrsHealthSummary
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+
+enum class HifzDashboardTab {
+    TODAY_PLAN,
+    SMART_QUEUE,
+    WEAK_VERSES,
+    SURAHS,
+    JUZ
+}
 
 data class HifzDashboardUiState(
     val isLoading: Boolean = true,
     val dueReviews: List<MemorizationStatusEntity> = emptyList(),
     val reviewList: List<MemorizationStatusEntity> = emptyList(),
+    val smartReviewQueue: List<MemorizationStatusEntity> = emptyList(),
+    val weakVersesList: List<MemorizationStatusEntity> = emptyList(),
+    val frequentlyFailedList: List<MemorizationStatusEntity> = emptyList(),
+    val dailyPlan: DailyHifzPlan? = null,
+    val srsHealth: SrsHealthSummary? = null,
     val surahsProgress: List<SurahMemorizationProgress> = emptyList(),
+    val juzProgressList: List<JuzMemorizationProgress> = emptyList(),
     val surahsMap: Map<Int, Surah> = emptyMap(),
     val versesReviewedWeek: Int = 0,
     val versesStartedTotal: Int = 0,
@@ -32,11 +53,13 @@ data class HifzDashboardUiState(
     val versesMemorizedTotal: Int = 0,
     val dailyTarget: Int = 3,
     val completedToday: Int = 0,
+    val currentStreakDays: Int = 0,
     val nextNewAyah: Pair<Int, Int> = Pair(1, 1),
     val nextTestAyah: Pair<Int, Int>? = null,
     val isReminderEnabled: Boolean = false,
     val reminderHour: Int = 20,
-    val reminderMinute: Int = 0
+    val reminderMinute: Int = 0,
+    val activeTab: HifzDashboardTab = HifzDashboardTab.TODAY_PLAN
 )
 
 class MemorizationViewModel(application: Application) : AndroidViewModel(application) {
@@ -61,6 +84,44 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
             set(Calendar.MILLISECOND, 0)
         }
         return cal.timeInMillis
+    }
+
+    private fun computeStreakDays(allStatuses: List<MemorizationStatusEntity>): Int {
+        val reviewDates = allStatuses.mapNotNull { it.lastReviewedAtEpochMillis }.toSet()
+        if (reviewDates.isEmpty()) return 0
+
+        val dayFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        val reviewDays = reviewDates.map { dayFormat.format(Date(it)) }.toSet()
+
+        val cal = Calendar.getInstance()
+        val todayStr = dayFormat.format(cal.time)
+
+        var streak = 0
+        if (reviewDays.contains(todayStr)) {
+            streak++
+            cal.add(Calendar.DAY_OF_YEAR, -1)
+        } else {
+            cal.add(Calendar.DAY_OF_YEAR, -1)
+            val yesterdayStr = dayFormat.format(cal.time)
+            if (!reviewDays.contains(yesterdayStr)) {
+                return 0
+            }
+        }
+
+        while (true) {
+            val checkStr = dayFormat.format(cal.time)
+            if (reviewDays.contains(checkStr)) {
+                streak++
+                cal.add(Calendar.DAY_OF_YEAR, -1)
+            } else {
+                break
+            }
+        }
+        return streak
+    }
+
+    fun selectTab(tab: HifzDashboardTab) {
+        _uiState.value = _uiState.value.copy(activeTab = tab)
     }
 
     fun loadData() {
@@ -92,6 +153,9 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
                 val reminderMinute = args[6] as Int
                 val lastReadSurah = args[7] as? Int
 
+                val now = System.currentTimeMillis()
+                val startOfDay = getStartOfDayMillis()
+
                 val memorizedCount = allStatuses.count { it.status == MemorizationStatus.MEMORIZED.name }
                 val learningCount = allStatuses.count { it.status == MemorizationStatus.LEARNING.name }
                 val inReviewCount = allStatuses.count { it.status == MemorizationStatus.REVIEW.name }
@@ -104,11 +168,33 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
                     )
                 }
 
-                val startOfDay = getStartOfDayMillis()
                 val completedTodayCount = allStatuses.count {
                     val last = it.lastReviewedAtEpochMillis ?: 0L
                     last >= startOfDay
                 }
+
+                // Smart Hifz Planner computations
+                val dailyPlan = SmartHifzPlanner.computeDailyPlan(
+                    allStatuses = allStatuses,
+                    dailyTarget = dailyTarget,
+                    startOfDayMillis = startOfDay,
+                    nowMillis = now
+                )
+
+                val smartQueue = SmartHifzPlanner.buildSmartReviewQueue(
+                    allStatuses = allStatuses,
+                    nowMillis = now
+                )
+
+                val srsHealth = SmartHifzPlanner.computeSrsHealth(
+                    allStatuses = allStatuses,
+                    nowMillis = now
+                )
+
+                val weakVerses = allStatuses.filter { it.isWeak }
+                val frequentlyFailed = allStatuses.filter { it.failedTests >= 2 }
+                val juzProgress = SmartHifzPlanner.computeJuzProgress(allStatuses)
+                val streakDays = computeStreakDays(allStatuses)
 
                 // Group by surah to calculate progress %
                 val groupedBySurah = allStatuses.groupBy { it.surahNumber }
@@ -128,7 +214,7 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
 
                 val weeklyReviewed = allStatuses.count {
                     val last = it.lastReviewedAtEpochMillis ?: 0L
-                    last >= (System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
+                    last >= (now - 7L * 24 * 60 * 60 * 1000)
                 }
 
                 // Calculate next unmemorized ayah to learn for NEW action
@@ -145,8 +231,10 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
 
                 val nextNew = Pair(targetSurah?.number ?: 1, nextAyahInSurah)
 
-                // Calculate next ayah for TEST action (due review, or first in-review, or first memorized)
-                val testAyah = when {
+                // Priority for next TEST action: first item in smartQueue or due or inReview
+                val testAyah = smartQueue.firstOrNull()?.let {
+                    Pair(it.surahNumber, it.ayahNumber)
+                } ?: when {
                     due.isNotEmpty() -> Pair(due.first().surahNumber, due.first().ayahNumber)
                     inReview.isNotEmpty() -> Pair(inReview.first().surahNumber, inReview.first().ayahNumber)
                     else -> allStatuses.find { it.status == MemorizationStatus.MEMORIZED.name }?.let {
@@ -158,7 +246,13 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
                     isLoading = false,
                     dueReviews = due,
                     reviewList = inReview,
+                    smartReviewQueue = smartQueue,
+                    weakVersesList = weakVerses,
+                    frequentlyFailedList = frequentlyFailed,
+                    dailyPlan = dailyPlan,
+                    srsHealth = srsHealth,
                     surahsProgress = progressList,
+                    juzProgressList = juzProgress,
                     surahsMap = surahMap,
                     versesReviewedWeek = weeklyReviewed,
                     versesStartedTotal = startedCount,
@@ -167,11 +261,13 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
                     versesMemorizedTotal = memorizedCount,
                     dailyTarget = dailyTarget,
                     completedToday = completedTodayCount,
+                    currentStreakDays = streakDays,
                     nextNewAyah = nextNew,
                     nextTestAyah = testAyah,
                     isReminderEnabled = reminderEnabled,
                     reminderHour = reminderHour,
-                    reminderMinute = reminderMinute
+                    reminderMinute = reminderMinute,
+                    activeTab = _uiState.value.activeTab
                 )
             }.collect { newState ->
                 _uiState.value = newState

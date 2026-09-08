@@ -7,6 +7,49 @@ import com.example.data.repository.TajwidRepository
 import com.example.domain.model.MemorizationStatus
 import kotlinx.coroutines.flow.first
 
+import java.util.Calendar
+
+enum class DailyRoutinePeriod(val periodNameAr: String, val periodNameFr: String, val periodNameEn: String) {
+    MORNING("صباحاً", "Matin", "Morning"),
+    DAYTIME("بعد ذلك", "Journée", "Daytime"),
+    EVENING("مساءً", "Soirée", "Evening"),
+    BEDTIME("قبل النوم", "Avant de dormir", "Bedtime")
+}
+
+enum class RoutineStepType {
+    REVIEW_OVERDUE,
+    LEARN_NEW,
+    BLIND_TEST,
+    NIGHT_REVISION
+}
+
+data class DailyRoutineStep(
+    val period: DailyRoutinePeriod,
+    val titleAr: String,
+    val titleFr: String,
+    val titleEn: String,
+    val descriptionAr: String,
+    val descriptionFr: String,
+    val descriptionEn: String,
+    val stepType: RoutineStepType,
+    val targetSurah: Int,
+    val targetAyah: Int,
+    val isCompleted: Boolean = false,
+    val initialTrainingStep: String? = null
+)
+
+data class DailyCompanionRoutine(
+    val dateEpochMillis: Long,
+    val currentPeriod: DailyRoutinePeriod,
+    val steps: List<DailyRoutineStep>,
+    val quickStartStep: DailyRoutineStep?,
+    val completionFraction: Float,
+    val allCompleted: Boolean,
+    val nextActionSuggestionAr: String,
+    val nextActionSuggestionFr: String,
+    val nextActionSuggestionEn: String
+)
+
 /**
  * Daily personalized study and review plan generated from real Room DB data.
  */
@@ -27,6 +70,195 @@ data class DailySmartAgenda(
 )
 
 object SmartCompanionEngine {
+
+    private fun getStartOfDayMillis(currentTimeMillis: Long): Long {
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = currentTimeMillis
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return cal.timeInMillis
+    }
+
+    fun determinePeriod(currentTimeMillis: Long = System.currentTimeMillis()): DailyRoutinePeriod {
+        val cal = Calendar.getInstance().apply { timeInMillis = currentTimeMillis }
+        val hour = cal.get(Calendar.HOUR_OF_DAY)
+        return when (hour) {
+            in 5..10 -> DailyRoutinePeriod.MORNING
+            in 11..16 -> DailyRoutinePeriod.DAYTIME
+            in 17..20 -> DailyRoutinePeriod.EVENING
+            else -> DailyRoutinePeriod.BEDTIME
+        }
+    }
+
+    /**
+     * Generates "رفيق اليوم" — the smart daily companion routine adapting to user's real progress.
+     */
+    suspend fun computeDailyRoutine(
+        memorizationDao: MemorizationDao,
+        dailyTarget: Int = 3,
+        currentTimeMillis: Long = System.currentTimeMillis()
+    ): DailyCompanionRoutine {
+        val startOfDay = getStartOfDayMillis(currentTimeMillis)
+        val allStatuses = try {
+            memorizationDao.getAllStatusesFlow().first()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val currentPeriod = determinePeriod(currentTimeMillis)
+
+        // Partition statuses from real data
+        val overdue = allStatuses.filter { it.isOverdue(currentTimeMillis) }
+            .sortedBy { it.nextReviewDueEpochMillis ?: Long.MAX_VALUE }
+        val weak = allStatuses.filter { it.isWeak }
+            .sortedByDescending { it.failedTests }
+        val inLearning = allStatuses.filter { it.status == MemorizationStatus.LEARNING.name }
+        val memorized = allStatuses.filter { it.status == MemorizationStatus.MEMORIZED.name }
+        val inReview = allStatuses.filter { it.status == MemorizationStatus.REVIEW.name }
+
+        // Determine targets for each period
+        // 1. Morning: Overdue or due review
+        val morningEntity = overdue.firstOrNull() ?: inReview.firstOrNull() ?: memorized.firstOrNull()
+        val morningSurah = morningEntity?.surahNumber ?: 1
+        val morningAyah = morningEntity?.ayahNumber ?: 1
+        val morningDone = morningEntity != null && (morningEntity.lastReviewedAtEpochMillis ?: 0L) >= startOfDay
+
+        // 2. Daytime: Learn new verses
+        val daytimeEntity = inLearning.firstOrNull() ?: allStatuses.find { it.status == MemorizationStatus.NEW.name }
+        val daytimeSurah = daytimeEntity?.surahNumber ?: (morningSurah)
+        val daytimeAyah = daytimeEntity?.ayahNumber ?: (if (morningAyah < 7) morningAyah + 1 else 1)
+        val daytimeDone = allStatuses.count { (it.lastReviewedAtEpochMillis ?: 0L) >= startOfDay } >= dailyTarget
+
+        // 3. Evening: Blind test on learned or reviewed verses
+        val eveningEntity = inLearning.firstOrNull() ?: morningEntity ?: daytimeEntity
+        val eveningSurah = eveningEntity?.surahNumber ?: morningSurah
+        val eveningAyah = eveningEntity?.ayahNumber ?: morningAyah
+        val eveningDone = allStatuses.any {
+            (it.lastReviewedAtEpochMillis ?: 0L) >= startOfDay && it.successfulTests > 0
+        }
+
+        // 4. Bedtime: Short anchoring revision of weak verses or daily progress
+        val bedtimeEntity = weak.firstOrNull() ?: morningEntity ?: eveningEntity
+        val bedtimeSurah = bedtimeEntity?.surahNumber ?: morningSurah
+        val bedtimeAyah = bedtimeEntity?.ayahNumber ?: morningAyah
+        val cal = Calendar.getInstance().apply { timeInMillis = currentTimeMillis }
+        val isBedtimeHour = cal.get(Calendar.HOUR_OF_DAY) >= 21 || cal.get(Calendar.HOUR_OF_DAY) < 5
+        val bedtimeDone = bedtimeEntity != null && (bedtimeEntity.lastReviewedAtEpochMillis ?: 0L) >= startOfDay && isBedtimeHour
+
+        val steps = listOf(
+            DailyRoutineStep(
+                period = DailyRoutinePeriod.MORNING,
+                titleAr = "مراجعة الورد المستحق",
+                titleFr = "Révision des versets dus",
+                titleEn = "Review due verses",
+                descriptionAr = "مراجعة الآيات المستحقة لتثبيتها في الذاكرة قصيرة المدى",
+                descriptionFr = "Consolider vos révisions matinales du jour",
+                descriptionEn = "Review overdue and due verses in the morning",
+                stepType = RoutineStepType.REVIEW_OVERDUE,
+                targetSurah = morningSurah,
+                targetAyah = morningAyah,
+                isCompleted = morningDone,
+                initialTrainingStep = null
+            ),
+            DailyRoutineStep(
+                period = DailyRoutinePeriod.DAYTIME,
+                titleAr = "تعلم آيات جديدة",
+                titleFr = "Apprentissage des nouveaux versets",
+                titleEn = "Learn new verses",
+                descriptionAr = "حفظ الآيات المقررة حسب وردك اليومي ($dailyTarget آيات)",
+                descriptionFr = "Apprendre les nouveaux versets de votre objectif ($dailyTarget / j)",
+                descriptionEn = "Memorize new verses towards daily target ($dailyTarget / day)",
+                stepType = RoutineStepType.LEARN_NEW,
+                targetSurah = daytimeSurah,
+                targetAyah = daytimeAyah,
+                isCompleted = daytimeDone,
+                initialTrainingStep = null
+            ),
+            DailyRoutineStep(
+                period = DailyRoutinePeriod.EVENING,
+                titleAr = "اختبار الغيب بدون نظر",
+                titleFr = "Validation à l'aveugle",
+                titleEn = "Blind test validation",
+                descriptionAr = "تسميع الآيات دون النظر في المصحف لاختبار قوة الحفظ",
+                descriptionFr = "Réciter sans regarder pour valider l'ancrage",
+                descriptionEn = "Recite without looking to test recall",
+                stepType = RoutineStepType.BLIND_TEST,
+                targetSurah = eveningSurah,
+                targetAyah = eveningAyah,
+                isCompleted = eveningDone,
+                initialTrainingStep = "BLIND_TEST"
+            ),
+            DailyRoutineStep(
+                period = DailyRoutinePeriod.BEDTIME,
+                titleAr = "جلسة تثبيت قبل النوم",
+                titleFr = "Révision d'ancrage du soir",
+                titleEn = "Bedtime anchoring review",
+                descriptionAr = "تلاوة هادئة لترسيخ ما حفظته اليوم في الذاكرة الدائمة",
+                descriptionFr = "Courte révision calme pour ancrer la mémoire",
+                descriptionEn = "Short quiet review to cement today's memorization",
+                stepType = RoutineStepType.NIGHT_REVISION,
+                targetSurah = bedtimeSurah,
+                targetAyah = bedtimeAyah,
+                isCompleted = bedtimeDone,
+                initialTrainingStep = null
+            )
+        )
+
+        // Quick start selection: prefer uncompleted step matching current period, or first uncompleted step
+        val stepForPeriod = steps.find { it.period == currentPeriod }
+        val quickStart = if (stepForPeriod != null && !stepForPeriod.isCompleted) {
+            stepForPeriod
+        } else {
+            steps.firstOrNull { !it.isCompleted } ?: steps.first()
+        }
+
+        val completedCount = steps.count { it.isCompleted }
+        val completionFraction = completedCount.toFloat() / steps.size.toFloat()
+        val allCompleted = completedCount == steps.size
+
+        val (nextAr, nextFr, nextEn) = when {
+            allCompleted -> Triple(
+                "ما شاء الله! أنجزت روتين اليوم كاملاً. تقبل الله طاعتكم.",
+                "Félicitations ! Vous avez accompli toute votre routine du jour.",
+                "Alhamdulillah! You completed your full daily routine today."
+            )
+            !morningDone -> Triple(
+                "ابدأ بمراجعة الآيات المستحقة صباحاً لتثبيت حفظك.",
+                "Commencez par réviser vos versets du matin.",
+                "Start by reviewing your due verses this morning."
+            )
+            !daytimeDone -> Triple(
+                "حان وقت حفظ الآيات الجديدة المحددة في خطتك اليومية.",
+                "Passez à l'apprentissage de vos nouveaux versets du jour.",
+                "Time to learn your new verses for today's goal."
+            )
+            !eveningDone -> Triple(
+                "مساءً: اختبر حفظك غيباً للتأكد من رسوخ الآيات.",
+                "Ce soir : validez votre mémorisation par le test à l'aveugle.",
+                "This evening: test your recall with the blind test."
+            )
+            else -> Triple(
+                "قبل النوم: مراجعة خفيفة لتثبيت الآيات قبل الراحة.",
+                "Avant de dormir : révision calme d'ancrage nocturne.",
+                "Before sleeping: short revision session to anchor memory."
+            )
+        }
+
+        return DailyCompanionRoutine(
+            dateEpochMillis = currentTimeMillis,
+            currentPeriod = currentPeriod,
+            steps = steps,
+            quickStartStep = quickStart,
+            completionFraction = completionFraction,
+            allCompleted = allCompleted,
+            nextActionSuggestionAr = nextAr,
+            nextActionSuggestionFr = nextFr,
+            nextActionSuggestionEn = nextEn
+        )
+    }
 
     /**
      * Computes the daily smart agenda from real user progress in Room DB.
@@ -52,14 +284,14 @@ object SmartCompanionEngine {
         }
 
         for (entity in allStatuses) {
+            if (entity.isOverdue(currentTimeMillis)) {
+                dueList.add(entity)
+            }
+            if (entity.isWeak) {
+                weakList.add(entity)
+            }
             when (entity.memorizationStatus) {
-                MemorizationStatus.MEMORIZED -> {
-                    memorizedCount++
-                    val due = entity.nextReviewDueEpochMillis
-                    if (due != null && due <= currentTimeMillis) {
-                        dueList.add(entity)
-                    }
-                }
+                MemorizationStatus.MEMORIZED -> memorizedCount++
                 MemorizationStatus.LEARNING -> {
                     learningCount++
                     learningList.add(entity)
@@ -67,7 +299,9 @@ object SmartCompanionEngine {
                 }
                 MemorizationStatus.REVIEW -> {
                     reviewCount++
-                    weakList.add(entity)
+                    if (!entity.isWeak) {
+                        weakList.add(entity)
+                    }
                     surahActivityMap[entity.surahNumber] = (surahActivityMap[entity.surahNumber] ?: 0) + 1
                 }
                 else -> {}

@@ -277,12 +277,34 @@ fun MemorizationScreen(
                 }
 
                 // SECTION 2: Daily Memorization Plan Card
+                // SECTION 2: Daily Memorization Plan Card with Quick Start
                 item {
+                    val highestPriorityAyah = uiState.dailyPlan?.prioritizedAyahs?.firstOrNull()
+                        ?: uiState.smartReviewQueue.firstOrNull()
+                        ?: uiState.dueReviews.firstOrNull()
+
                     DailyPlanCard(
+                        dailyPlan = uiState.dailyPlan,
                         dailyTarget = uiState.dailyTarget,
                         completedToday = uiState.completedToday,
                         onSelectTarget = { target -> viewModel.setDailyTarget(target) },
-                        onCustomTargetClick = { showCustomTargetDialog = true }
+                        onCustomTargetClick = { showCustomTargetDialog = true },
+                        onQuickStartSession = {
+                            if (highestPriorityAyah != null) {
+                                onStartTraining(highestPriorityAyah.surahNumber, highestPriorityAyah.ayahNumber, null)
+                            } else {
+                                onStartTraining(uiState.nextNewAyah.first, uiState.nextNewAyah.second, null)
+                            }
+                        }
+                    )
+                }
+
+                // SECTION 2.5: SRS Health & Streak Dashboard Card
+                item {
+                    SrsHealthAndStreakCard(
+                        streakDays = uiState.currentStreakDays,
+                        weeklyReviewed = uiState.versesReviewedWeek,
+                        srsHealth = uiState.srsHealth
                     )
                 }
 
@@ -307,7 +329,7 @@ fun MemorizationScreen(
                     )
                 }
 
-                // SECTION 5: Sub-tabs (Suivi du jour / Mes sourates / Liste révision)
+                // SECTION 5: Sub-tabs (File intelligente / Versets faibles / Mes sourates / Les 30 Ajza')
                 item {
                     TabRow(
                         selectedTabIndex = selectedTabIndex,
@@ -319,17 +341,17 @@ fun MemorizationScreen(
                             onClick = { selectedTabIndex = 0 },
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(strings.hifzTodayReviews, maxLines = 1, style = MaterialTheme.typography.labelMedium)
-                                    if (uiState.dueReviews.isNotEmpty()) {
+                                    Text(strings.hifzTabSmartQueue, maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                                    if (uiState.smartReviewQueue.isNotEmpty()) {
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Surface(
                                             shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.error,
+                                            color = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(18.dp)
                                         ) {
                                             Box(contentAlignment = Alignment.Center) {
                                                 Text(
-                                                    text = "${uiState.dueReviews.size}",
+                                                    text = "${uiState.smartReviewQueue.size}",
                                                     color = Color.White,
                                                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp)
                                                 )
@@ -342,27 +364,52 @@ fun MemorizationScreen(
                         Tab(
                             selected = selectedTabIndex == 1,
                             onClick = { selectedTabIndex = 1 },
-                            text = { Text(strings.hifzMySurahs, maxLines = 1, style = MaterialTheme.typography.labelMedium) }
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(strings.hifzTabWeakVerses, maxLines = 1, style = MaterialTheme.typography.labelMedium)
+                                    if (uiState.weakVersesList.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(18.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    text = "${uiState.weakVersesList.size}",
+                                                    color = Color.White,
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         )
                         Tab(
                             selected = selectedTabIndex == 2,
                             onClick = { selectedTabIndex = 2 },
-                            text = { Text(strings.hifzReviewList, maxLines = 1, style = MaterialTheme.typography.labelMedium) }
+                            text = { Text(strings.hifzMySurahs, maxLines = 1, style = MaterialTheme.typography.labelMedium) }
+                        )
+                        Tab(
+                            selected = selectedTabIndex == 3,
+                            onClick = { selectedTabIndex = 3 },
+                            text = { Text(strings.hifzTabJuz, maxLines = 1, style = MaterialTheme.typography.labelMedium) }
                         )
                     }
                 }
 
                 when (selectedTabIndex) {
                     0 -> {
-                        // Suivi du jour: Due for review today
-                        if (uiState.dueReviews.isEmpty()) {
+                        // Smart Review Queue (Prioritized: Overdue -> Failed -> Approaching -> Normal -> Learning)
+                        if (uiState.smartReviewQueue.isEmpty()) {
                             item {
                                 EmptyStateCard(message = strings.hifzNoDueReviews)
                             }
                         } else {
-                            items(uiState.dueReviews, key = { "${it.surahNumber}:${it.ayahNumber}" }) { item ->
+                            items(uiState.smartReviewQueue, key = { "smart_${it.surahNumber}:${it.ayahNumber}" }) { item ->
                                 val surah = uiState.surahsMap[item.surahNumber]
-                                DueReviewCardItem(
+                                SmartQueueCardItem(
                                     entity = item,
                                     surah = surah,
                                     onStartTraining = { onStartTraining(item.surahNumber, item.ayahNumber, null) }
@@ -372,7 +419,25 @@ fun MemorizationScreen(
                     }
 
                     1 -> {
-                        // Mes sourates: Progress bars per surah
+                        // Weak verses needing reinforcement
+                        if (uiState.weakVersesList.isEmpty()) {
+                            item {
+                                EmptyStateCard(message = "ما شاء الله! لا توجد آيات ضعيفة حالياً.")
+                            }
+                        } else {
+                            items(uiState.weakVersesList, key = { "weak_${it.surahNumber}:${it.ayahNumber}" }) { item ->
+                                val surah = uiState.surahsMap[item.surahNumber]
+                                WeakVerseCardItem(
+                                    entity = item,
+                                    surah = surah,
+                                    onStartTraining = { onStartTraining(item.surahNumber, item.ayahNumber, null) }
+                                )
+                            }
+                        }
+                    }
+
+                    2 -> {
+                        // Mes sourates: Progress bars per surah with Learning %, Review %, Remaining
                         if (uiState.surahsProgress.isEmpty()) {
                             item {
                                 EmptyStateCard(message = strings.hifzNoSurahsInProgress)
@@ -389,21 +454,18 @@ fun MemorizationScreen(
                         }
                     }
 
-                    2 -> {
-                        // Versets in REVIEW status
-                        if (uiState.reviewList.isEmpty()) {
-                            item {
-                                EmptyStateCard(message = "Aucun verset en cours de révision.")
-                            }
-                        } else {
-                            items(uiState.reviewList, key = { "${it.surahNumber}:${it.ayahNumber}" }) { item ->
-                                val surah = uiState.surahsMap[item.surahNumber]
-                                DueReviewCardItem(
-                                    entity = item,
-                                    surah = surah,
-                                    onStartTraining = { onStartTraining(item.surahNumber, item.ayahNumber, null) }
-                                )
-                            }
+                    3 -> {
+                        // Les 30 Ajza' progress
+                        items(uiState.juzProgressList, key = { it.juzNumber }) { juzProgress ->
+                            JuzProgressCardItem(
+                                progress = juzProgress,
+                                onOpenJuz = {
+                                    val metadata = com.example.domain.hifz.SmartHifzPlanner.JUZ_CATALOG.find { it.juzNumber == juzProgress.juzNumber }
+                                    if (metadata != null) {
+                                        onStartTraining(metadata.startSurah, metadata.startAyah, null)
+                                    }
+                                }
+                            )
                         }
                     }
                 }
@@ -549,10 +611,12 @@ fun ActionCardItem(
 
 @Composable
 fun DailyPlanCard(
+    dailyPlan: com.example.domain.hifz.DailyHifzPlan?,
     dailyTarget: Int,
     completedToday: Int,
     onSelectTarget: (Int) -> Unit,
-    onCustomTargetClick: () -> Unit
+    onCustomTargetClick: () -> Unit,
+    onQuickStartSession: () -> Unit
 ) {
     val strings = LocalAppStrings.current
     val progress = if (dailyTarget > 0) (completedToday.toFloat() / dailyTarget).coerceIn(0f, 1f) else 0f
@@ -598,6 +662,58 @@ fun DailyPlanCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            // Breakdown pills: due reviews, weak verses, new verses
+            if (dailyPlan != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFE65100).copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = "${dailyPlan.dueReviewsCount} à réviser",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = Color(0xFFE65100),
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = "${dailyPlan.weakVersesCount} faibles",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                    Surface(
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF1B5E20).copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = "${dailyPlan.newVersesCount} nouveaux",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = Color(0xFF1B5E20),
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier
@@ -618,12 +734,35 @@ fun DailyPlanCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Plan target selector chips
+            // Quick Start CTA button: "ابدأ جلسة اليوم"
+            Button(
+                onClick = onQuickStartSession,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = strings.hifzStartTodaySession,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Plan target selector chips: 1, 3, 5, 10, Custom
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                listOf(1 to strings.hifzPlanTarget1, 3 to strings.hifzPlanTarget3, 5 to strings.hifzPlanTarget5).forEach { (target, label) ->
+                listOf(
+                    1 to strings.hifzPlanTarget1,
+                    3 to strings.hifzPlanTarget3,
+                    5 to strings.hifzPlanTarget5,
+                    10 to strings.hifzPlanTarget10
+                ).forEach { (target, label) ->
                     val isSelected = dailyTarget == target
                     Surface(
                         modifier = Modifier
@@ -636,7 +775,7 @@ fun DailyPlanCard(
                     ) {
                         Text(
                             text = label,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -646,7 +785,7 @@ fun DailyPlanCard(
                 }
 
                 // Custom button
-                val isCustom = dailyTarget !in listOf(1, 3, 5)
+                val isCustom = dailyTarget !in listOf(1, 3, 5, 10)
                 Surface(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
@@ -668,6 +807,142 @@ fun DailyPlanCard(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun SrsHealthAndStreakCard(
+    streakDays: Int,
+    weeklyReviewed: Int,
+    srsHealth: com.example.domain.hifz.SrsHealthSummary?
+) {
+    val strings = LocalAppStrings.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Streak badge
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFF6F00).copy(alpha = 0.12f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🔥", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = String.format(strings.hifzStreakFormat, streakDays),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFE65100)
+                        )
+                    }
+                }
+
+                // Weekly progress badge
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("📈", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = String.format(strings.hifzWeeklyReviewedFormat, weeklyReviewed),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+
+            if (srsHealth != null) {
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    SrsHealthPill(
+                        modifier = Modifier.weight(1f),
+                        label = strings.hifzSrsStrongLabel,
+                        count = srsHealth.strongCount,
+                        color = Color(0xFF2E7D32)
+                    )
+                    SrsHealthPill(
+                        modifier = Modifier.weight(1f),
+                        label = strings.hifzSrsInProgressLabel,
+                        count = srsHealth.inProgressCount,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    SrsHealthPill(
+                        modifier = Modifier.weight(1f),
+                        label = strings.hifzSrsWeakLabel,
+                        count = srsHealth.weakCount,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                    SrsHealthPill(
+                        modifier = Modifier.weight(1f),
+                        label = strings.hifzSrsOverdueLabel,
+                        count = srsHealth.overdueCount,
+                        color = Color(0xFFE65100)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SrsHealthPill(
+    modifier: Modifier = Modifier,
+    label: String,
+    count: Int,
+    color: Color
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = color.copy(alpha = 0.08f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.25f))
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
         }
     }
 }
@@ -992,13 +1267,290 @@ fun SurahProgressCardItem(
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = String.format(strings.hifzProgressFormat, progress.memorizedCount, progress.totalAyahs, progress.percentage.toInt()),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = String.format(strings.hifzProgressFormat, progress.memorizedCount, progress.totalAyahs, progress.percentage.toInt()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = String.format(strings.hifzRemainingVersesFormat, progress.remainingAyahs),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SmartQueueCardItem(
+    entity: MemorizationStatusEntity,
+    surah: Surah?,
+    onStartTraining: () -> Unit
+) {
+    val strings = LocalAppStrings.current
+    val now = System.currentTimeMillis()
+    val dueEpoch = entity.nextReviewDueEpochMillis ?: now
+    val diffDays = ((dueEpoch - now) / (24L * 60 * 60 * 1000)).toInt()
+
+    // Determine priority label & color
+    val (priorityLabel, badgeColor) = when {
+        entity.isOverdue(now) -> {
+            val days = (-diffDays).coerceAtLeast(1)
+            String.format(strings.hifzDueBadgeOverdueFormat, days) to MaterialTheme.colorScheme.error
+        }
+        entity.failedTests >= 2 -> {
+            "Échec répété (${entity.failedTests}x)" to MaterialTheme.colorScheme.error
+        }
+        entity.nextReviewDueEpochMillis != null && entity.nextReviewDueEpochMillis <= (now + 24L * 60 * 60 * 1000) -> {
+            "Dans les 24h" to Color(0xFFE65100)
+        }
+        entity.status == com.example.domain.model.MemorizationStatus.REVIEW.name -> {
+            "Révision #${entity.reviewCount}" to MaterialTheme.colorScheme.primary
+        }
+        else -> {
+            "Nouveau / En cours" to Color(0xFF1B5E20)
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${entity.ayahNumber}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = surah?.name ?: "Sourate ${entity.surahNumber}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = badgeColor.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = priorityLabel,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = badgeColor,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    if (entity.successfulTests > 0 || entity.failedTests > 0) {
+                        Text(
+                            text = "${entity.successfulTests}✓ ${entity.failedTests}✗",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Button(
+                onClick = onStartTraining,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(strings.hifzStartTraining)
+            }
+        }
+    }
+}
+
+@Composable
+fun WeakVerseCardItem(
+    entity: MemorizationStatusEntity,
+    surah: Surah?,
+    onStartTraining: () -> Unit
+) {
+    val strings = LocalAppStrings.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.errorContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "${entity.ayahNumber}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = surah?.name ?: "Sourate ${entity.surahNumber}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Échecs : ${entity.failedTests} • Succès : ${entity.successfulTests}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            Button(
+                onClick = onStartTraining,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Renforcer")
+            }
+        }
+    }
+}
+
+@Composable
+fun JuzProgressCardItem(
+    progress: com.example.domain.hifz.JuzMemorizationProgress,
+    onOpenJuz: () -> Unit
+) {
+    val strings = LocalAppStrings.current
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onOpenJuz() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        modifier = Modifier.size(36.dp),
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "${progress.juzNumber}",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = progress.nameArabic,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Juz ${progress.juzNumber} • ${progress.totalAyahs} versets",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Text(
+                    text = "${progress.memorizedPercentage.toInt()}%",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            LinearProgressIndicator(
+                progress = { (progress.memorizedPercentage / 100f).coerceIn(0f, 1f) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = Color(0xFF2E7D32),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${progress.memorizedCount} / ${progress.totalAyahs} mémorisés",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = String.format(strings.hifzRemainingVersesFormat, progress.remainingAyahs),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿package com.example.ui.i18n
+package com.example.ui.i18n
 
 object EnglishAppStrings : AppStrings {
     override val appTitle = "Tajwid & Tartil"
@@ -253,8 +253,20 @@ object EnglishAppStrings : AppStrings {
     override val hifzPlanTarget1 = "1 verse / day"
     override val hifzPlanTarget3 = "3 verses / day"
     override val hifzPlanTarget5 = "5 verses / day"
+    override val hifzPlanTarget10 = "10 verses / day"
     override val hifzPlanTargetCustom = "Custom"
     override val hifzPlanSetCustomTitle = "Set daily goal"
+    override val hifzStartTodaySession = "Start Today's Session"
+    override val hifzStreakFormat = "%d day streak"
+    override val hifzWeeklyReviewedFormat = "%d verses reviewed this week"
+    override val hifzTabSmartQueue = "Smart Review Queue"
+    override val hifzTabWeakVerses = "Verses to Strengthen"
+    override val hifzTabJuz = "30 Ajza'"
+    override val hifzSrsStrongLabel = "Mastered"
+    override val hifzSrsWeakLabel = "Needs Work"
+    override val hifzSrsOverdueLabel = "Overdue"
+    override val hifzSrsInProgressLabel = "In Review"
+    override val hifzRemainingVersesFormat = "%d remaining"
     override val hifzReminderSettingsTitle = "Memorization Reminders"
     override val hifzReminderToggle = "Enable daily reminder"
     override val hifzReminderTimePrompt = "Reminder time"
@@ -338,4 +350,19 @@ object EnglishAppStrings : AppStrings {
     override val rafiqWeakVersesLabel = "Verses to reinforce:"
     override val rafiqTotalMemorizedLabel = "Total memorized:"
     override val rafiqDailyGoalLabel = "Suggested daily goal:"
+
+    // Phase 2: Smart Daily Routine
+    override val rafiqRoutineTitle = "Daily Rafiq • Quran Routine"
+    override val rafiqRoutineSubtitle = "Smart habit companion tailored to your daily schedule"
+    override val rafiqPeriodMorning = "Morning (Fajr)"
+    override val rafiqPeriodDaytime = "Daytime"
+    override val rafiqPeriodEvening = "Evening"
+    override val rafiqPeriodBedtime = "Bedtime"
+    override val rafiqStepCompleted = "Completed ✓"
+    override val rafiqStepCurrent = "Current"
+    override val rafiqStepPending = "Upcoming"
+    override val rafiqQuickStartToday = "Start Today's Session ▶"
+    override val rafiqNextActionTitle = "Recommended Step:"
+    override val rafiqHomeCardTitle = "Daily Rafiq • Quran Habit"
+    override val rafiqHomeCardSubtitle = "Adaptive reviews and reinforcement throughout your day"
 }
