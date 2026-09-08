@@ -114,6 +114,9 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
     private val _diagnostic = MutableStateFlow<RecitationDiagnostic?>(null)
     val diagnostic: StateFlow<RecitationDiagnostic?> = _diagnostic.asStateFlow()
 
+    private val _recordingError = MutableStateFlow<String?>(null)
+    val recordingError: StateFlow<String?> = _recordingError.asStateFlow()
+
     // Audio playback status
     private val _isPlayingModel = MutableStateFlow(false)
     val isPlayingModel: StateFlow<Boolean> = _isPlayingModel.asStateFlow()
@@ -161,6 +164,9 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
         _currentAyahNumber.value = ayahNumber
         _isTextRevealed.value = false
         _diagnostic.value = null
+        _lastTakeResult.value?.let {
+            File(it.filePath).delete()
+        }
         _lastTakeResult.value = null
         loadAyahText(surahNumber, ayahNumber)
     }
@@ -189,6 +195,10 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
     fun startRecording() {
         viewModelScope.launch {
             stopAudio()
+            _recordingError.value = null
+            _lastTakeResult.value?.let {
+                File(it.filePath).delete()
+            }
             recordedDbSamples.clear()
             val started = recorderEngine.startTake()
             if (started) {
@@ -203,6 +213,8 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
                         }
                     }
                 }
+            } else {
+                _recordingError.value = "Impossible de démarrer l'enregistrement. Vérifiez les autorisations du microphone."
             }
         }
     }
@@ -318,8 +330,16 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
                 _currentQueueIndex.value = nextIndex
                 val nextEntity = _sessionQueue.value[nextIndex]
                 selectAyah(nextEntity.surahNumber, nextEntity.ayahNumber)
+            } else {
+                _sessionQueue.value = emptyList()
+                _currentQueueIndex.value = 0
+                loadAgenda() // Force agenda reload to populate a new queue if needed, or state clear
             }
         }
+    }
+
+    fun clearRecordingError() {
+        _recordingError.value = null
     }
 
     fun clearQueryResponse() {
@@ -527,5 +547,9 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
         stopAudio()
         audioPlayer.release()
         sampleCollectorJob?.cancel()
+        viewModelScope.launch {
+            recorderEngine.discardTake()
+            recorderEngine.discardSession()
+        }
     }
 }

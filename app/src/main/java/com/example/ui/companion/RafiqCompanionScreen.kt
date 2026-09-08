@@ -1,5 +1,6 @@
 package com.example.ui.companion
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -18,10 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.audio.PacingAssessment
 import com.example.ui.i18n.AppLanguage
@@ -52,13 +55,22 @@ fun RafiqCompanionScreen(
 ) {
     var selectedTab by remember { mutableStateOf(RafiqTab.SMART_SESSION) }
     val currentLanguage = LocalAppLanguage.current
+    val context = LocalContext.current
 
     val agenda by viewModel.agenda.collectAsState()
     val sessionQueue by viewModel.sessionQueue.collectAsState()
     val queueIndex by viewModel.currentQueueIndex.collectAsState()
     val dailyRoutine by viewModel.dailyRoutine.collectAsState()
     val nextActionSuggestion by viewModel.nextActionSuggestion.collectAsState()
-    val activeQueryResponse by viewModel.activeQueryResponse.collectAsState()
+    val activeQueryResponse by viewModel.activeQueryResponse.collectAsStateWithLifecycle()
+    val recordingError by viewModel.recordingError.collectAsStateWithLifecycle()
+
+    LaunchedEffect(recordingError) {
+        recordingError?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            viewModel.clearRecordingError()
+        }
+    }
 
     val currentSurah by viewModel.currentSurahNumber.collectAsState()
     val currentAyah by viewModel.currentAyahNumber.collectAsState()
@@ -453,9 +465,17 @@ fun RafiqCompanionScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
-                                    val stabilityText = String.format(java.util.Locale.getDefault(), strings.rafiqStabilityFormat, diag.energyStabilityPercent)
+                                    val stabilityText = if (diag.isStabilityEstimated) {
+                                        if (currentLanguage == AppLanguage.ARABIC) {
+                                            "(تقدير - التسجيل قصير جداً لقياس دقيق)"
+                                        } else {
+                                            "(estimation — enregistrement trop court pour une mesure précise)"
+                                        }
+                                    } else {
+                                        String.format(java.util.Locale.getDefault(), strings.rafiqStabilityFormat, diag.energyStabilityPercent)
+                                    }
                                     Text(
-                                        text = "• $stabilityMsg ($stabilityText)",
+                                        text = "• $stabilityMsg $stabilityText",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

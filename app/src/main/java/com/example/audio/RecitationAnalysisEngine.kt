@@ -27,6 +27,7 @@ data class RecitationDiagnostic(
     val pauseCount: Int,
     val prolongedPausesCount: Int,
     val energyStabilityPercent: Int,
+    val isStabilityEstimated: Boolean = false,
     val pacingMessageFr: String,
     val pacingMessageAr: String,
     val pacingMessageEn: String = "",
@@ -134,8 +135,9 @@ object RecitationAnalysisEngine {
             else -> "$pauseCount pause(s) observed, compatible with natural breath."
         }
 
-        // Energy stability calculation
-        val stabilityPercent = if (recordedDbSamples.size >= 4) {
+        val isStabilityEstimated = recordedDbSamples.size < 4 || recordedDbSamples.count { it > -45.0f } < 4
+
+        val stabilityPercent = if (!isStabilityEstimated) {
             calculateStability(recordedDbSamples)
         } else {
             85 // Default healthy baseline
@@ -171,6 +173,7 @@ object RecitationAnalysisEngine {
             pauseCount = pauseCount,
             prolongedPausesCount = prolongedCount,
             energyStabilityPercent = stabilityPercent,
+            isStabilityEstimated = isStabilityEstimated,
             pacingMessageFr = pacingMessageFr,
             pacingMessageAr = pacingMessageAr,
             pacingMessageEn = pacingMessageEn,

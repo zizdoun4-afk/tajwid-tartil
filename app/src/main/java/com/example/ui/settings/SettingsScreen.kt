@@ -90,20 +90,19 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Language Selection Section
             SettingsCategoryCard(
                 title = strings.languageSectionTitle,
                 icon = Icons.Default.Language
             ) {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     AppLanguage.entries.forEach { lang ->
                         val isSelected = uiState.selectedLanguage == lang
                         Surface(
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable { viewModel.onLanguageSelected(lang) }
                                 .testTag("select_language_${lang.code}"),
