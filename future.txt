@@ -1,0 +1,674 @@
+# MASTER FUTURE ROADMAP — TAJWID & TARTIL
+
+## Product evolution toward “Rafiq Al-Quran” — Personal Quran Companion
+
+> **IMPORTANT:** This document is the FUTURE ROADMAP only.
+> The current Hardening / QA phase is considered completed.
+> Do NOT redo the previous hardening work unless a new regression is discovered.
+
+---
+
+# 0. GLOBAL RULES — READ BEFORE IMPLEMENTATION
+
+The current application is already functional and must remain stable.
+
+## Absolute rules
+
+1. **Do NOT rewrite the existing architecture.**
+2. **Do NOT replace working Quran/audio/recording/Hifz/Tajwid systems.**
+3. Reuse existing repositories, ViewModels, audio engine, recording engine, Room database and UI architecture whenever possible.
+4. Before adding anything, inspect the existing implementation and identify what can be reused.
+5. No duplicated source of truth.
+6. No fake statistics or fake progress.
+7. No hardcoded Quran content.
+8. Never generate or modify Quranic text with AI.
+9. Preserve:
+
+   * Quran reader
+   * Quran audio
+   * recording
+   * take/session system
+   * Hifz
+   * memorization training
+   * Tajwid
+   * bookmarks
+   * settings
+   * RTL
+   * Arabic/French/English
+   * responsive layouts
+10. Every Phase must compile and pass tests before starting the next Phase.
+11. Do not implement all phases simultaneously.
+12. Implement **one Phase at a time**, verify it, then continue.
+13. No unnecessary dependencies.
+14. No cloud backend unless explicitly required by a future feature.
+15. AI/voice intelligence must NEVER be introduced before Phase 5.
+16. AI must never invent Quran text, verses, translations, rulings or religious content.
+17. Keep the application usable offline wherever the current architecture allows it.
+
+---
+
+# PHASE 1 — CORE QURAN EXPERIENCE
+
+## Objective
+
+Transform the existing Quran reader into a stronger, polished Quran reading/listening experience.
+
+### 1. Quran navigation
+
+Improve and consolidate:
+
+* Surah list
+* Juz navigation
+* Ayah navigation
+* Last-read position
+* Continue reading
+* Search
+* Bookmarks
+* Favorite ayahs
+* Quick access to recently opened surahs
+
+Reuse the current Quran data source.
+
+### 2. Search
+
+Provide a reliable Quran search experience:
+
+* Arabic search
+* Search through available translations where already supported
+* Highlight matching results
+* Open result directly at the ayah
+* Preserve RTL
+* Do not introduce external Quran data unnecessarily
+
+### 3. Audio experience
+
+Build on the existing AudioPlayer:
+
+* Play/pause
+* Previous/next ayah
+* Surah playback
+* Ayah repeat
+* Section/selection repeat where technically supported
+* Surah repeat
+* Playback speed
+* Progress
+* Resume playback
+* Clear playback state
+
+Do NOT create another audio engine.
+
+### 4. Reading position
+
+Persist:
+
+* Last opened surah
+* Last ayah
+* Reading position
+* Playback position where technically appropriate
+
+Add a simple:
+
+**Continue Reading**
+
+entry point.
+
+### 5. Bookmarks and favorites
+
+Improve the existing bookmark system:
+
+* Add bookmark
+* Remove bookmark
+* List bookmarks
+* Open bookmark
+* Optional favorite marker if it does not duplicate existing functionality
+
+### 6. UX polish
+
+Make the Quran experience calm and premium:
+
+* Clean Quran screen
+* Clear typography
+* Excellent Arabic RTL
+* Responsive phone/tablet layouts
+* Light/dark compatibility
+* No unnecessary visual clutter
+
+### Phase 1 acceptance
+
+* Existing Quran functionality still works.
+* Audio still works.
+* Bookmarks still work.
+* Last position survives app restart.
+* Search opens the correct ayah.
+* Arabic/French/English remain functional.
+* RTL remains correct.
+* Tests pass.
+* APK builds successfully.
+
+---
+
+# PHASE 2 — PRO QURAN RECORDER
+
+## Objective
+
+Turn the existing recording capability into a professional Quran recording/review experience.
+
+### 1. Recording library
+
+Create a clean recording history/library using the existing persistence architecture.
+
+Each recording should have reliable metadata:
+
+* Surah
+* Ayah
+* Date
+* Duration
+* Recording status
+* File location
+
+Room metadata remains the source of truth.
+
+### 2. Retakes
+
+Allow:
+
+* Record
+* Stop
+* Replay
+* Retake
+* Delete
+* Keep best recording
+
+Do not create duplicate or orphan files.
+
+### 3. Model vs user recording
+
+For an ayah:
+
+* Listen to reciter
+* Listen to own recording
+* Switch between them
+* Repeat either one
+
+Where technically useful, provide a simple comparison workflow.
+
+### 4. Recording sessions
+
+Build on the existing Take/Session architecture.
+
+Support:
+
+* Recording one ayah
+* Recording several ayahs
+* Session completion
+* Cancel
+* Resume where appropriate
+* Cleanup after abandonment
+
+### 5. Recording review
+
+Add a simple review flow:
+
+**Listen → Record → Listen to yourself → Retake or keep**
+
+No AI analysis yet.
+
+### 6. Reader → Hifz connection
+
+After a useful recording, allow:
+
+**Add to memorization / revision**
+
+If accepted:
+
+* create/update Hifz state appropriately.
+
+If rejected:
+
+* do not modify Hifz state.
+
+### Phase 2 acceptance
+
+* No orphan recordings.
+* No duplicate source of truth.
+* Recording survives app restart when intentionally saved.
+* Temporary recording is deleted when abandoned.
+* Retake works.
+* Playback works.
+* Hifz integration does not corrupt existing states.
+* Tests pass.
+* APK builds.
+
+---
+
+# PHASE 3 — SMART HIFZ & MEMORIZATION JOURNEY
+
+## Objective
+
+Evolve the current Hifz system from simple status tracking into a complete memorization journey.
+
+The existing five-step training workflow remains the foundation.
+
+## 1. Memorization dashboard
+
+Create a clear Hifz overview:
+
+* Verses learning
+* Verses in review
+* Verses memorized
+* Due for review
+* Surah progress
+* Current memorization journey
+
+Do not display metrics that are not actually calculated.
+
+## 2. New / Review / Test
+
+Create three clear actions:
+
+### NEW
+
+Learn new verses.
+
+### REVIEW
+
+Review verses that are due.
+
+### TEST
+
+Test memorization without looking.
+
+Use the existing Hifz state machine.
+
+## 3. Spaced repetition
+
+Use the established review intervals:
+
+* 1 day
+* 3 days
+* 7 days
+* 14 days
+
+Review dates must be calculated from real stored data.
+
+## 4. Memorization plans
+
+Allow the user to organize memorization into a simple plan:
+
+Examples:
+
+* 1 ayah/day
+* 3 ayahs/day
+* 5 ayahs/day
+* Custom
+
+Do not introduce gamification unnecessarily.
+
+## 5. Progress journey
+
+Provide a visual journey:
+
+* Started
+* Learning
+* Reviewing
+* Memorized
+
+The progress must come from the actual Hifz database.
+
+## 6. Training improvements
+
+Build on the existing five-step training:
+
+1. Listen ×3
+2. Accompanied reading
+3. Solo recording
+4. Playback/review
+5. Blind test
+
+Keep strict action gating.
+
+Do not bypass required steps.
+
+## 7. Retry behavior
+
+A failed blind test:
+
+* keeps the ayah in review/learning state
+* does not mark MEMORIZED
+* allows another attempt
+
+A successful validation:
+
+* marks MEMORIZED
+* updates review date
+* completes the training session
+
+## 8. Optional reminders
+
+Provide local reminders for:
+
+* New memorization
+* Due review
+* Daily plan
+
+Keep them optional.
+
+No cloud notification infrastructure.
+
+### Phase 3 acceptance
+
+* Hifz states remain consistent.
+* Due dates are correct.
+* Memorization progress is real.
+* Training remains functional.
+* Blind test controls remain explicit.
+* No fake statistics.
+* Existing Hifz data survives migration.
+* Tests pass.
+* APK builds.
+
+---
+
+# PHASE 4 — TAJWID LEARNING & PRACTICE
+
+## Objective
+
+Turn Tajwid from passive information into an actual learning experience.
+
+## 1. Tajwid lessons
+
+Organize lessons progressively:
+
+### Beginner
+
+* Makharij basics
+* Short vowels
+* Madd basics
+* Noon Sakinah
+* Tanween
+
+### Intermediate
+
+* Idgham
+* Ikhfa
+* Iqlab
+* Izhar
+* Qalqalah
+* Madd categories
+
+### Advanced
+
+* Detailed rules
+* Exceptions
+* Advanced pronunciation practice
+
+Use verified content.
+
+Do not invent religious rules.
+
+## 2. Tajwid examples
+
+For every rule where possible:
+
+* Explanation
+* Quran example
+* Audio example
+* Highlight relevant portion
+* Listen/repeat
+
+Use the application's existing Quran data and audio infrastructure.
+
+## 3. Tajwid exercises
+
+Add exercises such as:
+
+* Identify the rule
+* Identify the highlighted letter
+* Choose the correct pronunciation rule
+* Listen and identify
+* Repeat the example
+
+No AI required.
+
+## 4. Tajwid + memorization
+
+Connect Tajwid practice with Hifz:
+
+When reviewing an ayah, optionally show:
+
+**Tajwid points to watch**
+
+Only when the rule/content is verified.
+
+## 5. Read with me
+
+Create a guided reading mode:
+
+* Display one ayah
+* Play model
+* User reads
+* Continue to next ayah
+* Repeat when requested
+
+Reuse the current audio and recording architecture.
+
+Do not pretend the app can synchronize the user's voice automatically unless such capability is genuinely implemented.
+
+## 6. Tajwid progress
+
+Track real completed exercises/lessons.
+
+Do not create meaningless points or fake scores.
+
+### Phase 4 acceptance
+
+* Tajwid lessons are organized.
+* Examples use valid Quran data.
+* Exercises work.
+* Audio works.
+* RTL works.
+* No fabricated religious content.
+* Tajwid integrates naturally with reading/Hifz.
+* Tests pass.
+* APK builds.
+
+---
+
+# PHASE 5 — VOICE INTELLIGENCE / SMART QURAN COMPANION
+
+## Objective
+
+Only after Phases 1–4 are stable, evaluate intelligent voice features.
+
+This is the most advanced phase and must be implemented carefully.
+
+## 1. Recitation analysis
+
+Potential capabilities:
+
+* Detect pauses
+* Detect timing problems
+* Compare user's recitation with expected ayah boundaries
+* Detect possible pronunciation deviations
+* Provide structured feedback
+
+IMPORTANT:
+
+AI must NOT pretend to be a qualified Quran teacher.
+
+Feedback must be presented as:
+
+**possible issue / review this part**
+
+rather than absolute religious judgment.
+
+## 2. Voice-assisted memorization
+
+Possible workflow:
+
+**Recite from memory → analyze → feedback → retry**
+
+The system may identify likely mismatches against the known Quran text.
+
+It must NEVER generate a replacement Quran verse.
+
+## 3. Smart review
+
+Use real Hifz data to suggest:
+
+* What to review today
+* Which ayahs are due
+* Which ayahs repeatedly fail
+* Which surahs need more practice
+
+The recommendation engine should be based on actual stored history.
+
+## 4. Smart memorization plan
+
+Potential intelligent planning:
+
+* Daily capacity
+* New vs review balance
+* Weak verses
+* Upcoming due reviews
+
+The system proposes a plan; the user remains in control.
+
+## 5. Intelligent “Read With Me”
+
+Possible advanced mode:
+
+* Model recitation
+* User recitation
+* Voice detection
+* Ayah progression
+* Pause detection
+* Review prompts
+
+Only implement capabilities that are technically reliable.
+
+Never fake synchronization.
+
+## 6. Personal Quran Companion
+
+Eventually combine:
+
+* Reading
+* Listening
+* Recording
+* Tajwid
+* Memorization
+* Review
+* Progress
+* Smart recommendations
+
+into one coherent experience:
+
+# Rafiq Al-Quran — رفيق القرآن
+
+The assistant should feel like a **Quran study companion**, not a generic chatbot.
+
+## AI safety/content rules
+
+AI must NEVER:
+
+* generate Quran verses
+* alter Quran text
+* invent hadith
+* invent Tajwid rules
+* provide fabricated religious citations
+* silently change Quran data
+* claim certainty where analysis is uncertain
+
+AI should work around the verified Quran database, not replace it.
+
+### Phase 5 acceptance
+
+* Voice analysis is demonstrably functional.
+* False positives are handled carefully.
+* No invented Quran content.
+* User can retry.
+* Offline functionality remains intact where possible.
+* Privacy is explicit.
+* Audio/voice data handling is controlled.
+* Existing app functionality remains unaffected.
+* Tests pass.
+* APK builds.
+
+---
+
+# FINAL PRODUCT VISION
+
+The final evolution should be:
+
+## TAJWID & TARTIL
+
+### ↓
+
+## Quran Reader + Audio
+
+### ↓
+
+## Quran Recorder
+
+### ↓
+
+## Hifz & Memorization
+
+### ↓
+
+## Tajwid Learning
+
+### ↓
+
+# رفيق القرآن — Rafiq Al-Quran
+
+A unified Quran companion centered on:
+
+**Read → Listen → Recite → Record → Review → Memorize → Improve**
+
+---
+
+# IMPLEMENTATION PROTOCOL
+
+For EACH phase:
+
+1. Inspect the current implementation.
+2. Identify reusable components.
+3. Write a short implementation plan.
+4. Implement only that phase.
+5. Do not silently implement future phases.
+6. Run:
+   `./gradlew testDebugUnitTest`
+7. Run:
+   `./gradlew assembleDebug`
+8. Perform relevant manual checks.
+9. Check for regressions.
+10. Report:
+
+* files modified
+* features implemented
+* tests
+* exact results
+* remaining issues
+
+11. Stop and wait for approval before beginning the next Phase.
+
+# FINAL RULE
+
+**STABILITY FIRST.**
+
+Do not sacrifice the existing working Quran, audio, recording, Hifz, Tajwid, bookmarks, localization, RTL or responsive behavior for new features.
+
+No unnecessary rewrite.
+No unnecessary dependency.
+No speculative architecture.
+No fake functionality.
+No fake data.
+No invented Quran content.
+
+Implement the roadmap progressively:
+
+**PHASE 1 → VERIFY → PHASE 2 → VERIFY → PHASE 3 → VERIFY → PHASE 4 → VERIFY → PHASE 5**
+
+Do not skip verification between phases.

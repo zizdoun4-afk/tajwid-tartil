@@ -17,6 +17,14 @@ interface AppStrings {
     val navMemorization: String
     val navSettings: String
 
+    // Phase 1 — Continue Reading & Audio
+    val continueReadingTitle: String
+    val continueReadingSubtitleFormat: String // e.g. "Sourate %s, verset %d"
+    val autoPlayNextAyah: String
+    val autoPlayOn: String
+    val autoPlayOff: String
+    val surahProgressFormat: String // e.g. "Verset %d / %d"
+
     // Memorization & Hifz Features
     val memorizationTitle: String
     val memorizationSubtitle: String
@@ -246,6 +254,13 @@ object ArabicAppStrings : AppStrings {
     override val navMemorization = "حفظي"
     override val navSettings = "الإعدادات"
 
+    override val continueReadingTitle = "متابعة القراءة"
+    override val continueReadingSubtitleFormat = "سورة %s — آية %d"
+    override val autoPlayNextAyah = "تشغيل تلقائي للآية التالية"
+    override val autoPlayOn = "تشغيل تلقائي: مفعّل"
+    override val autoPlayOff = "تشغيل تلقائي: معطّل"
+    override val surahProgressFormat = "آية %d / %d"
+
     override val memorizationTitle = "حفظي"
     override val memorizationSubtitle = "برنامج الحفظ والمراجعة التراكمية"
     override val memorizationHeaderArabic = "حفظي"
@@ -462,6 +477,13 @@ object FrenchAppStrings : AppStrings {
     override val navLibrary = "Bibliothèque"
     override val navMemorization = "Mémorisation"
     override val navSettings = "Réglages"
+
+    override val continueReadingTitle = "Continuer la lecture"
+    override val continueReadingSubtitleFormat = "Sourate %s — verset %d"
+    override val autoPlayNextAyah = "Lecture automatique des versets"
+    override val autoPlayOn = "Lecture auto : activée"
+    override val autoPlayOff = "Lecture auto : désactivée"
+    override val surahProgressFormat = "Verset %d / %d"
 
     override val memorizationTitle = "Mémorisation (Hifz)"
     override val memorizationSubtitle = "Programme de révision et mémorisation continue"

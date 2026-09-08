@@ -10,6 +10,7 @@ import com.example.domain.model.RecitationStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
@@ -22,10 +23,20 @@ class UserPreferencesRepository(private val context: Context) {
         val THEME_ID = stringPreferencesKey("selected_theme_id")
         val LANGUAGE_CODE = stringPreferencesKey("selected_language_code")
         val BOOKMARKS = stringSetPreferencesKey("bookmarked_ayahs")
+        val LAST_SURAH = intPreferencesKey("last_read_surah")
+        val LAST_AYAH_INDEX = intPreferencesKey("last_read_ayah_index")
     }
 
     val bookmarkedAyahs: Flow<Set<String>> = context.dataStore.data.map { prefs ->
         prefs[Keys.BOOKMARKS] ?: emptySet()
+    }
+
+    val lastReadSurah: Flow<Int?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.LAST_SURAH]
+    }
+
+    val lastReadAyahIndex: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.LAST_AYAH_INDEX] ?: 0
     }
 
     val selectedLanguage: Flow<com.example.ui.i18n.AppLanguage> = context.dataStore.data.map { prefs ->
@@ -90,5 +101,12 @@ class UserPreferencesRepository(private val context: Context) {
             prefs[Keys.BOOKMARKS] = mutable
         }
         return isAdded
+    }
+
+    suspend fun saveLastPosition(surahNumber: Int, ayahIndex: Int) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.LAST_SURAH] = surahNumber
+            prefs[Keys.LAST_AYAH_INDEX] = ayahIndex
+        }
     }
 }

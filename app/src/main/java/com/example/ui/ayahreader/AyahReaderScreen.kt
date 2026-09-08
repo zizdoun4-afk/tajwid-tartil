@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stop
@@ -556,6 +557,34 @@ fun AyahReaderScreen(
                                             }
                                         )
                                     }
+                                }
+
+                                // Auto-play next ayah toggle
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    FilterChip(
+                                        selected = uiState.autoPlayNext,
+                                        onClick = { viewModel.toggleAutoPlay() },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.SkipNext,
+                                                contentDescription = strings.autoPlayNextAyah,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        },
+                                        label = {
+                                            Text(
+                                                text = if (uiState.autoPlayNext) strings.autoPlayOn else strings.autoPlayOff,
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        },
+                                        modifier = Modifier.testTag("auto_play_toggle")
+                                    )
                                 }
                             }
                         }

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.db.AppDatabase
+import com.example.data.local.preferences.UserPreferencesRepository
 import com.example.data.repository.QuranRepository
 import com.example.domain.model.Surah
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,17 +14,25 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+data class ContinueReadingState(
+    val surahNumber: Int,
+    val surahName: String,
+    val ayahIndex: Int
+)
+
 data class SurahListUiState(
     val isLoading: Boolean = false,
     val surahs: List<Surah> = emptyList(),
     val searchQuery: String = "",
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val continueReading: ContinueReadingState? = null
 )
 
 class SurahListViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getInstance(application)
     private val repository = QuranRepository(db.quranCacheDao(), application)
+    private val prefsRepository = UserPreferencesRepository(application)
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -40,8 +49,9 @@ class SurahListViewModel(application: Application) : AndroidViewModel(applicatio
         _isLoading,
         _allSurahs,
         _searchQuery,
-        _errorMessage
-    ) { loading, surahs, query, error ->
+        _errorMessage,
+        prefsRepository.lastReadSurah
+    ) { loading, surahs, query, error, lastSurahNum ->
         val filtered = if (query.isBlank()) {
             surahs
         } else {
@@ -52,17 +62,28 @@ class SurahListViewModel(application: Application) : AndroidViewModel(applicatio
                 surah.number.toString() == query.trim()
             }
         }
+
+        val continueReading = if (lastSurahNum != null && query.isBlank()) {
+            val surah = surahs.find { it.number == lastSurahNum }
+            if (surah != null) ContinueReadingState(surah.number, surah.englishName, 0)
+            else null
+        } else null
+
         SurahListUiState(
             isLoading = loading,
             surahs = filtered,
             searchQuery = query,
-            errorMessage = error
+            errorMessage = error,
+            continueReading = continueReading
         )
     }.stateIn(
         scope = viewModelScope,
         started = kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000),
         initialValue = SurahListUiState(isLoading = true)
     )
+
+    // Expose last ayah index separately for navigation
+    val lastReadAyahIndex = prefsRepository.lastReadAyahIndex
 
     init {
         loadSurahs()

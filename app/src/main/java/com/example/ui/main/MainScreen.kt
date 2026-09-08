@@ -4,8 +4,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
@@ -17,6 +17,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -42,9 +43,11 @@ import com.example.ui.surahlist.SurahListScreen
 import com.example.ui.surahlist.SurahListViewModel
 import com.example.ui.training.TrainingSessionScreen
 import com.example.ui.training.TrainingSessionViewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 sealed class BottomNavRoute(val route: String, val icon: ImageVector) {
-    object Surahs : BottomNavRoute("surahs", Icons.Default.MenuBook)
+    object Surahs : BottomNavRoute("surahs", Icons.AutoMirrored.Filled.MenuBook)
     object Library : BottomNavRoute("library", Icons.Default.LibraryMusic)
     object Memorization : BottomNavRoute("memorization", Icons.Default.Psychology)
     object Settings : BottomNavRoute("settings", Icons.Default.Settings)
@@ -129,10 +132,17 @@ fun MainScreen(
         ) {
             composable(BottomNavRoute.Surahs.route) {
                 val surahViewModel: SurahListViewModel = viewModel()
+                val coroutineScope = rememberCoroutineScope()
                 SurahListScreen(
                     viewModel = surahViewModel,
                     onSurahClick = { surahNum ->
-                        navController.navigate("reader/$surahNum")
+                        navController.navigate("reader/$surahNum/0")
+                    },
+                    onContinueReadingClick = { surahNum ->
+                        coroutineScope.launch {
+                            val ayahIndex = surahViewModel.lastReadAyahIndex.first()
+                            navController.navigate("reader/$surahNum/$ayahIndex")
+                        }
                     },
                     onSettingsClick = {
                         navController.navigate(BottomNavRoute.Settings.route)
@@ -165,16 +175,20 @@ fun MainScreen(
             }
 
             composable(
-                route = "reader/{surahNumber}",
-                arguments = listOf(navArgument("surahNumber") { type = NavType.IntType })
+                route = "reader/{surahNumber}/{startAyahIndex}",
+                arguments = listOf(
+                    navArgument("surahNumber") { type = NavType.IntType },
+                    navArgument("startAyahIndex") { type = NavType.IntType; defaultValue = 0 }
+                )
             ) { backStackEntry ->
                 val surahNumber = backStackEntry.arguments?.getInt("surahNumber") ?: 1
+                val startAyahIndex = backStackEntry.arguments?.getInt("startAyahIndex") ?: 0
                 val ayahViewModel: AyahReaderViewModel = viewModel(
                     factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                         @Suppress("UNCHECKED_CAST")
                         override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                             val app = (navController.context.applicationContext as android.app.Application)
-                            return AyahReaderViewModel(app, surahNumber) as T
+                            return AyahReaderViewModel(app, surahNumber, startAyahIndex) as T
                         }
                     }
                 )

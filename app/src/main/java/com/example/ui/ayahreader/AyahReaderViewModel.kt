@@ -68,7 +68,8 @@ data class AyahReaderUiState(
     val tempRecordingFile: File? = null,
     val reciterNameInput: String = "Ahmed",
     val errorMessage: String? = null,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val autoPlayNext: Boolean = false
 ) {
     val isCurrentAyahBookmarked: Boolean
         get() {
@@ -82,7 +83,8 @@ data class AyahReaderUiState(
 
 class AyahReaderViewModel(
     application: Application,
-    val surahNumber: Int
+    val surahNumber: Int,
+    private val startAyahIndex: Int = 0
 ) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getInstance(application)
@@ -224,11 +226,14 @@ class AyahReaderViewModel(
             val result = quranRepository.getSurahAyahs(surahNumber)
             if (result.isSuccess) {
                 val ayahs = result.getOrDefault(emptyList())
+                val restoredIndex = startAyahIndex.coerceIn(0, (ayahs.size - 1).coerceAtLeast(0))
                 _uiState.value = _uiState.value.copy(
                     isLoadingAyahs = false,
                     ayahs = ayahs,
-                    currentAyahIndex = 0
+                    currentAyahIndex = restoredIndex
                 )
+                // Persist the opening of this surah as the last-read position
+                prefsRepository.saveLastPosition(surahNumber, restoredIndex)
             } else {
                 _uiState.value = _uiState.value.copy(
                     isLoadingAyahs = false,
@@ -260,7 +265,34 @@ class AyahReaderViewModel(
         lastPlayingAyahNumber = ayah.numberInSurah
         isRetryingWithFallback = false
         val url = _uiState.value.recitationStyle.buildAudioUrl(surahNumber, ayah.numberInSurah)
-        audioPlayer.togglePlayPause(url)
+
+        // Build the auto-play completion callback
+        val onComplete: (() -> Unit)? = if (_uiState.value.autoPlayNext) {
+            {
+                viewModelScope.launch {
+                    val nextIndex = _uiState.value.currentAyahIndex + 1
+                    if (nextIndex < _uiState.value.ayahs.size) {
+                        _uiState.value = _uiState.value.copy(currentAyahIndex = nextIndex)
+                        prefsRepository.saveLastPosition(surahNumber, nextIndex)
+                        val nextAyah = _uiState.value.ayahs[nextIndex]
+                        lastPlayingAyahNumber = nextAyah.numberInSurah
+                        val nextUrl = _uiState.value.recitationStyle.buildAudioUrl(surahNumber, nextAyah.numberInSurah)
+                        audioPlayer.play(nextUrl)
+                    }
+                }
+            }
+        } else null
+
+        // togglePlayPause for same URL, or force-play with completion callback
+        if (onComplete != null) {
+            audioPlayer.play(url, onComplete)
+        } else {
+            audioPlayer.togglePlayPause(url)
+        }
+    }
+
+    fun toggleAutoPlay() {
+        _uiState.value = _uiState.value.copy(autoPlayNext = !_uiState.value.autoPlayNext)
     }
 
     // --- Mode Ayah (Take) Engine Operations ---
@@ -484,18 +516,18 @@ class AyahReaderViewModel(
         audioPlayer.stop()
         val count = _uiState.value.ayahs.size
         if (count > 0 && _uiState.value.currentAyahIndex < count - 1) {
-            _uiState.value = _uiState.value.copy(
-                currentAyahIndex = _uiState.value.currentAyahIndex + 1
-            )
+            val newIndex = _uiState.value.currentAyahIndex + 1
+            _uiState.value = _uiState.value.copy(currentAyahIndex = newIndex)
+            viewModelScope.launch { prefsRepository.saveLastPosition(surahNumber, newIndex) }
         }
     }
 
     fun goToPrevAyah() {
         audioPlayer.stop()
         if (_uiState.value.currentAyahIndex > 0) {
-            _uiState.value = _uiState.value.copy(
-                currentAyahIndex = _uiState.value.currentAyahIndex - 1
-            )
+            val newIndex = _uiState.value.currentAyahIndex - 1
+            _uiState.value = _uiState.value.copy(currentAyahIndex = newIndex)
+            viewModelScope.launch { prefsRepository.saveLastPosition(surahNumber, newIndex) }
         }
     }
 
@@ -503,6 +535,7 @@ class AyahReaderViewModel(
         audioPlayer.stop()
         if (index in _uiState.value.ayahs.indices) {
             _uiState.value = _uiState.value.copy(currentAyahIndex = index)
+            viewModelScope.launch { prefsRepository.saveLastPosition(surahNumber, index) }
         }
     }
 
