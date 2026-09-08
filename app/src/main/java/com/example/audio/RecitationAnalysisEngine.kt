@@ -29,10 +29,17 @@ data class RecitationDiagnostic(
     val energyStabilityPercent: Int,
     val pacingMessageFr: String,
     val pacingMessageAr: String,
+    val pacingMessageEn: String = "",
     val pauseMessageFr: String,
+    val pauseMessageAr: String = "",
+    val pauseMessageEn: String = "",
     val stabilityMessageFr: String,
+    val stabilityMessageAr: String = "",
+    val stabilityMessageEn: String = "",
     val tajwidPointsToWatch: List<TajwidAnnotation>,
-    val pedagogicalDisclaimerFr: String = "Cette analyse acoustique assistée est un repère indicatif pour votre entraînement personnel et ne remplace pas l'écoute d'un enseignant qualifié (Cheikh / Mouqri)."
+    val pedagogicalDisclaimerFr: String = "Cette analyse acoustique assistée est un repère indicatif pour votre entraînement personnel et ne remplace pas l'écoute d'un enseignant qualifié (Cheikh / Mouqri).",
+    val pedagogicalDisclaimerAr: String = "هذا التحليل الصوتي والإيقاعي وسيلة تدريبية استرشادية ولا يغني عن التلقي والمشافهة على يد شيخ متقن.",
+    val pedagogicalDisclaimerEn: String = "This assistive acoustic analysis is an indicative reference for personal practice and does not replace evaluation by a qualified Quran teacher."
 )
 
 object RecitationAnalysisEngine {
@@ -91,9 +98,15 @@ object RecitationAnalysisEngine {
         }
 
         val pacingMessageAr = when (pacingAssessment) {
-            PacingAssessment.MEASURED_TARTIL -> "إيقاع ترتيل متزن ومضبوط"
-            PacingAssessment.TOO_FAST_HADR -> "إيقاع حدر سريع - يُرجى إعطاء المدود والغنن حقها"
-            PacingAssessment.ELONGATED_OR_HESITANT -> "إيقاع بطيء أو متردد - احرص على سلاسة الوصل"
+            PacingAssessment.MEASURED_TARTIL -> "إيقاع ترتيل متزن ومضبوط وفق أصول الترتيل المعتدل."
+            PacingAssessment.TOO_FAST_HADR -> "إيقاع حدر سريع - يُرجى إعطاء المدود والغنن حقها من الزمن."
+            PacingAssessment.ELONGATED_OR_HESITANT -> "إيقاع بطيء أو متردد - احرص على سلاسة الوصل وتجنب التردد."
+        }
+
+        val pacingMessageEn = when (pacingAssessment) {
+            PacingAssessment.MEASURED_TARTIL -> "Measured and steady tempo: Pacing matches moderate Tartil standards."
+            PacingAssessment.TOO_FAST_HADR -> "Fast tempo (Hadr): Allow full timing for elongations (Madd) and ghunnah."
+            PacingAssessment.ELONGATED_OR_HESITANT -> "Elongated tempo: Maintain smooth word transitions and avoid hesitations."
         }
 
         // Pause analysis from amplitude samples if available, or estimated
@@ -109,6 +122,18 @@ object RecitationAnalysisEngine {
             else -> "$pauseCount pause(s) observée(s), compatible avec la respiration naturelle."
         }
 
+        val pauseMessageAr = when {
+            pauseCount == 0 -> "تلاوة متواصلة بدون توقفات ملحوظة."
+            prolongedCount > 1 -> "تمت ملاحظة $pauseCount وقفات، منها $prolongedCount وقفات طويلة. احرص على الوقف الحسن."
+            else -> "تمت ملاحظة $pauseCount وقفات متناسقة مع التنفس الطبيعي."
+        }
+
+        val pauseMessageEn = when {
+            pauseCount == 0 -> "Continuous recitation without significant interruptions observed."
+            prolongedCount > 1 -> "$pauseCount pause(s) observed, including $prolongedCount extended pause(s). Ensure stopping only at permitted Waqf."
+            else -> "$pauseCount pause(s) observed, compatible with natural breath."
+        }
+
         // Energy stability calculation
         val stabilityPercent = if (recordedDbSamples.size >= 4) {
             calculateStability(recordedDbSamples)
@@ -120,6 +145,18 @@ object RecitationAnalysisEngine {
             "Soutien du souffle régulier et projection vocale stable."
         } else {
             "Fluctuations d'intensité vocale observées : maintenez un appui constant sur le souffle."
+        }
+
+        val stabilityMessageAr = if (stabilityPercent >= 75) {
+            "دعم تنفسي منتظم ونبرة صوتية مستقرة."
+        } else {
+            "تذبذب في شدة الصوت: حافظ على استقرار تدفق النفس."
+        }
+
+        val stabilityMessageEn = if (stabilityPercent >= 75) {
+            "Steady breath support and stable vocal projection."
+        } else {
+            "Vocal intensity fluctuations observed: maintain steady breath support."
         }
 
         // Lookup classical Tajwid points for this verse
@@ -136,8 +173,13 @@ object RecitationAnalysisEngine {
             energyStabilityPercent = stabilityPercent,
             pacingMessageFr = pacingMessageFr,
             pacingMessageAr = pacingMessageAr,
+            pacingMessageEn = pacingMessageEn,
             pauseMessageFr = pauseMessageFr,
+            pauseMessageAr = pauseMessageAr,
+            pauseMessageEn = pauseMessageEn,
             stabilityMessageFr = stabilityMessageFr,
+            stabilityMessageAr = stabilityMessageAr,
+            stabilityMessageEn = stabilityMessageEn,
             tajwidPointsToWatch = tajwidPoints
         )
     }

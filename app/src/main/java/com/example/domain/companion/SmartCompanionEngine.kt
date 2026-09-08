@@ -5,6 +5,7 @@ import com.example.data.local.db.MemorizationStatusEntity
 import com.example.data.local.db.TajwidProgressDao
 import com.example.data.repository.TajwidRepository
 import com.example.domain.model.MemorizationStatus
+import kotlinx.coroutines.flow.first
 
 /**
  * Daily personalized study and review plan generated from real Room DB data.
@@ -20,6 +21,7 @@ data class DailySmartAgenda(
     val recommendedSurahToPractice: Int?,
     val recommendedTajwidLessonId: String?,
     val recommendedTajwidTitleFr: String?,
+    val recommendedTajwidTitleAr: String? = null,
     val motivationMessageFr: String,
     val motivationMessageAr: String
 )
@@ -34,52 +36,42 @@ object SmartCompanionEngine {
         tajwidProgressDao: TajwidProgressDao,
         currentTimeMillis: Long = System.currentTimeMillis()
     ): DailySmartAgenda {
-        // 1. Fetch real statuses
+        // 1. Fetch real statuses from Room
         val dueList = mutableListOf<MemorizationStatusEntity>()
         var memorizedCount = 0
         var learningCount = 0
         var reviewCount = 0
         val weakList = mutableListOf<MemorizationStatusEntity>()
         val learningList = mutableListOf<MemorizationStatusEntity>()
-
-        // Surah occurrence counter for active learning
         val surahActivityMap = mutableMapOf<Int, Int>()
 
-        try {
-            // Check through all memorization entries
-            // Using direct queries
-            val allStatuses = memorizationDao.getStatusForSurah(1) // baseline test check
-            // For comprehensive agenda, check Juz Amma / active surahs
-            for (surah in 1..114) {
-                val surahStatuses = memorizationDao.getStatusForSurah(surah)
-                if (surahStatuses.isEmpty()) continue
+        val allStatuses = try {
+            memorizationDao.getAllStatusesFlow().first()
+        } catch (e: Exception) {
+            emptyList()
+        }
 
-                for (entity in surahStatuses) {
-                    when (entity.memorizationStatus) {
-                        MemorizationStatus.MEMORIZED -> {
-                            memorizedCount++
-                            // Check if SRS review is due
-                            val due = entity.nextReviewDueEpochMillis
-                            if (due != null && due <= currentTimeMillis) {
-                                dueList.add(entity)
-                            }
-                        }
-                        MemorizationStatus.LEARNING -> {
-                            learningCount++
-                            learningList.add(entity)
-                            surahActivityMap[surah] = (surahActivityMap[surah] ?: 0) + 1
-                        }
-                        MemorizationStatus.REVIEW -> {
-                            reviewCount++
-                            weakList.add(entity)
-                            surahActivityMap[surah] = (surahActivityMap[surah] ?: 0) + 1
-                        }
-                        else -> {}
+        for (entity in allStatuses) {
+            when (entity.memorizationStatus) {
+                MemorizationStatus.MEMORIZED -> {
+                    memorizedCount++
+                    val due = entity.nextReviewDueEpochMillis
+                    if (due != null && due <= currentTimeMillis) {
+                        dueList.add(entity)
                     }
                 }
+                MemorizationStatus.LEARNING -> {
+                    learningCount++
+                    learningList.add(entity)
+                    surahActivityMap[entity.surahNumber] = (surahActivityMap[entity.surahNumber] ?: 0) + 1
+                }
+                MemorizationStatus.REVIEW -> {
+                    reviewCount++
+                    weakList.add(entity)
+                    surahActivityMap[entity.surahNumber] = (surahActivityMap[entity.surahNumber] ?: 0) + 1
+                }
+                else -> {}
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
 
         // 2. Recommend surah to practice (most active learning or default 114 / 1)
@@ -88,20 +80,23 @@ object SmartCompanionEngine {
 
         // 3. Recommended Tajwid lesson
         var recLessonId: String? = null
-        var recLessonTitle: String? = null
+        var recLessonTitleFr: String? = null
+        var recLessonTitleAr: String? = null
         try {
             val allLessons = TajwidRepository.LESSONS
             for (lesson in allLessons) {
                 val progress = tajwidProgressDao.getProgressForLesson(lesson.id)
                 if (progress == null || !progress.isCompleted) {
                     recLessonId = lesson.id
-                    recLessonTitle = lesson.titleFr
+                    recLessonTitleFr = lesson.titleFr
+                    recLessonTitleAr = lesson.titleAr
                     break
                 }
             }
             if (recLessonId == null && allLessons.isNotEmpty()) {
                 recLessonId = allLessons.first().id
-                recLessonTitle = allLessons.first().titleFr
+                recLessonTitleFr = allLessons.first().titleFr
+                recLessonTitleAr = allLessons.first().titleAr
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -141,7 +136,8 @@ object SmartCompanionEngine {
             dailyTargetAyahs = dailyTarget,
             recommendedSurahToPractice = recommendedSurah,
             recommendedTajwidLessonId = recLessonId,
-            recommendedTajwidTitleFr = recLessonTitle,
+            recommendedTajwidTitleFr = recLessonTitleFr,
+            recommendedTajwidTitleAr = recLessonTitleAr,
             motivationMessageFr = msgFr,
             motivationMessageAr = msgAr
         )

@@ -326,6 +326,36 @@ interface AppStrings {
     val rafiqCompareWithModel: String
     val rafiqMyVoiceAnalysis: String
     val rafiqStrengthenRecommendationsTitle: String
+
+    val rafiqTabSmartSession: String
+    val rafiqTabAnalyzer: String
+    val rafiqTabProgram: String
+    val rafiqQueueProgressFormat: String
+    val rafiqSurahAyahFormat: String
+    val rafiqBlindModeTitle: String
+    val rafiqBlindModeSubtitle: String
+    val rafiqRecordingInProgress: String
+    val rafiqStopAndAnalyze: String
+    val rafiqRecordMicrophone: String
+    val rafiqReRecord: String
+    val rafiqPlayMyVoice: String
+    val rafiqPlayModelSheikh: String
+    val rafiqStopAudio: String
+    val rafiqPacingTartil: String
+    val rafiqPacingHadr: String
+    val rafiqPacingElongated: String
+    val rafiqStabilityFormat: String
+    val rafiqTajwidPointsHeader: String
+    val rafiqMarkNeedsWork: String
+    val rafiqMarkMastered: String
+    val rafiqQuickAnalyzerTitle: String
+    val rafiqQuickAnalyzerDesc: String
+    val rafiqRecommendedTajwidLabel: String
+    val rafiqOpenLesson: String
+    val rafiqDueVersesLabel: String
+    val rafiqWeakVersesLabel: String
+    val rafiqTotalMemorizedLabel: String
+    val rafiqDailyGoalLabel: String
 }
 
 object ArabicAppStrings : AppStrings {
@@ -636,6 +666,36 @@ object ArabicAppStrings : AppStrings {
     override val rafiqCompareWithModel = "مقارنة مع القارئ المرجعي"
     override val rafiqMyVoiceAnalysis = "تحليل تلاوتي"
     override val rafiqStrengthenRecommendationsTitle = "توصيات تعزيز الحفظ والتجويد"
+
+    override val rafiqTabSmartSession = "الجلسة الذكية"
+    override val rafiqTabAnalyzer = "المحلل الصوتي"
+    override val rafiqTabProgram = "برنامج اليوم"
+    override val rafiqQueueProgressFormat = "آية %d من %d"
+    override val rafiqSurahAyahFormat = "سورة %d — آية %d"
+    override val rafiqBlindModeTitle = "📖 تلاوة غيباً (الاختبار الأعمى)"
+    override val rafiqBlindModeSubtitle = "سجل تلاوتك من الذاكرة ثم اكشف النص القرآني للتأكد"
+    override val rafiqRecordingInProgress = "جاري التسجيل... اتلُ الآية بترتيل وهدوء"
+    override val rafiqStopAndAnalyze = "إيقاف والتحليل ⏹"
+    override val rafiqRecordMicrophone = "تسجيل التلاوة 🎙"
+    override val rafiqReRecord = "إعادة التسجيل 🎙"
+    override val rafiqPlayMyVoice = "تلاوتي ▶"
+    override val rafiqPlayModelSheikh = "القارئ النموذجي ▶"
+    override val rafiqStopAudio = "إيقاف ⏹"
+    override val rafiqPacingTartil = "ترتيل متزن"
+    override val rafiqPacingHadr = "حدر سريع"
+    override val rafiqPacingElongated = "إيقاع بطيء"
+    override val rafiqStabilityFormat = "ثبات الصوت: %d%%"
+    override val rafiqTajwidPointsHeader = "أحكام التجويد في هذه الآية:"
+    override val rafiqMarkNeedsWork = "بحاجة لتثبيت"
+    override val rafiqMarkMastered = "أتقنت الحفظ ✓"
+    override val rafiqQuickAnalyzerTitle = "المحلل الصوتي السريع"
+    override val rafiqQuickAnalyzerDesc = "اختر آية محددة لتحليل الإيقاع والوقف ومطابقة أحكام التجويد."
+    override val rafiqRecommendedTajwidLabel = "درس التجويد المقترح:"
+    override val rafiqOpenLesson = "فتح الدرس ▶"
+    override val rafiqDueVersesLabel = "الآيات المستحقة اليوم:"
+    override val rafiqWeakVersesLabel = "آيات بحاجة لتثبيت:"
+    override val rafiqTotalMemorizedLabel = "مجموع المحفوظ:"
+    override val rafiqDailyGoalLabel = "الهدف اليومي المقترح:"
 }
 
 object FrenchAppStrings : AppStrings {
@@ -946,11 +1006,42 @@ object FrenchAppStrings : AppStrings {
     override val rafiqCompareWithModel = "Comparer avec le modèle"
     override val rafiqMyVoiceAnalysis = "Analyse de ma récitation"
     override val rafiqStrengthenRecommendationsTitle = "Recommandations du jour"
+
+    override val rafiqTabSmartSession = "Session Intelligente"
+    override val rafiqTabAnalyzer = "Analyseur"
+    override val rafiqTabProgram = "Programme"
+    override val rafiqQueueProgressFormat = "Verset %d sur %d"
+    override val rafiqSurahAyahFormat = "Sourate %d — Verset %d"
+    override val rafiqBlindModeTitle = "📖 Récitation de mémoire (Mode à l'aveugle)"
+    override val rafiqBlindModeSubtitle = "Enregistrez votre récitation puis vérifiez le texte"
+    override val rafiqRecordingInProgress = "Enregistrement en cours... Récitez posément"
+    override val rafiqStopAndAnalyze = "Arrêter et Analyser ⏹"
+    override val rafiqRecordMicrophone = "Réciter dans le micro 🎙"
+    override val rafiqReRecord = "Réenregistrer 🎙"
+    override val rafiqPlayMyVoice = "Ma voix ▶"
+    override val rafiqPlayModelSheikh = "Cheikh (Modèle) ▶"
+    override val rafiqStopAudio = "Stop ⏹"
+    override val rafiqPacingTartil = "Tartil régulier"
+    override val rafiqPacingHadr = "Rapide (Hadr)"
+    override val rafiqPacingElongated = "Prolongé"
+    override val rafiqStabilityFormat = "Stabilité : %d%%"
+    override val rafiqTajwidPointsHeader = "Points de Tajwid à surveiller sur ce verset :"
+    override val rafiqMarkNeedsWork = "À consolider"
+    override val rafiqMarkMastered = "Maîtrisé ✓"
+    override val rafiqQuickAnalyzerTitle = "Analyseur Vocal Rapide"
+    override val rafiqQuickAnalyzerDesc = "Sélectionnez un verset pour analyser votre tempo et vérifier les règles de Tajwid."
+    override val rafiqRecommendedTajwidLabel = "Leçon de Tajwid conseillée :"
+    override val rafiqOpenLesson = "Ouvrir la leçon ▶"
+    override val rafiqDueVersesLabel = "Versets dus aujourd'hui :"
+    override val rafiqWeakVersesLabel = "Versets à consolider :"
+    override val rafiqTotalMemorizedLabel = "Total mémorisés :"
+    override val rafiqDailyGoalLabel = "Objectif quotidien suggéré :"
 }
 
 fun getAppStrings(language: AppLanguage): AppStrings {
     return when (language) {
         AppLanguage.ARABIC -> ArabicAppStrings
         AppLanguage.FRENCH -> FrenchAppStrings
+        AppLanguage.ENGLISH -> EnglishAppStrings
     }
 }

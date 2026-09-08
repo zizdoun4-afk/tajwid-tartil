@@ -1,25 +1,21 @@
 package com.example.ui.companion
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,7 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.audio.PacingAssessment
+import com.example.ui.i18n.AppLanguage
 import com.example.ui.i18n.AppStrings
+import com.example.ui.i18n.LocalAppLanguage
 import com.example.ui.theme.QuranTextTypography
 
 enum class RafiqTab {
@@ -45,6 +43,7 @@ fun RafiqCompanionScreen(
     viewModel: RafiqCompanionViewModel = viewModel()
 ) {
     var selectedTab by remember { mutableStateOf(RafiqTab.SMART_SESSION) }
+    val currentLanguage = LocalAppLanguage.current
 
     val agenda by viewModel.agenda.collectAsState()
     val sessionQueue by viewModel.sessionQueue.collectAsState()
@@ -106,17 +105,17 @@ fun RafiqCompanionScreen(
                 Tab(
                     selected = selectedTab == RafiqTab.SMART_SESSION,
                     onClick = { selectedTab = RafiqTab.SMART_SESSION },
-                    text = { Text("Session Intelligente", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                    text = { Text(strings.rafiqTabSmartSession, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
                 )
                 Tab(
                     selected = selectedTab == RafiqTab.QUICK_ANALYSIS,
                     onClick = { selectedTab = RafiqTab.QUICK_ANALYSIS },
-                    text = { Text("Analyseur", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                    text = { Text(strings.rafiqTabAnalyzer, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
                 )
                 Tab(
                     selected = selectedTab == RafiqTab.RECOMMENDATIONS,
                     onClick = { selectedTab = RafiqTab.RECOMMENDATIONS },
-                    text = { Text("Programme", fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                    text = { Text(strings.rafiqTabProgram, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
                 )
             }
 
@@ -148,8 +147,12 @@ fun RafiqCompanionScreen(
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
+                                val motivation = when (currentLanguage) {
+                                    AppLanguage.ARABIC -> agenda?.motivationMessageAr ?: strings.rafiqDailySmartSessionDesc
+                                    else -> agenda?.motivationMessageFr ?: strings.rafiqDailySmartSessionDesc
+                                }
                                 Text(
-                                    text = agenda?.motivationMessageFr ?: strings.rafiqDailySmartSessionDesc,
+                                    text = motivation,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -164,13 +167,13 @@ fun RafiqCompanionScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Verset ${queueIndex + 1} sur ${sessionQueue.size}",
+                                    text = String.format(java.util.Locale.getDefault(), strings.rafiqQueueProgressFormat, queueIndex + 1, sessionQueue.size),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Text(
-                                    text = "Sourate $currentSurah — Verset $currentAyah",
+                                    text = String.format(java.util.Locale.getDefault(), strings.rafiqSurahAyahFormat, currentSurah, currentAyah),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -198,14 +201,14 @@ fun RafiqCompanionScreen(
                                     )
                                 } else {
                                     Text(
-                                        text = "📖 Récitation de mémoire (Mode à l'aveugle)",
+                                        text = strings.rafiqBlindModeTitle,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         textAlign = TextAlign.Center
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "Enregistrez votre récitation puis vérifiez le texte",
+                                        text = strings.rafiqBlindModeSubtitle,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -240,7 +243,7 @@ fun RafiqCompanionScreen(
 
                                 if (isRecording) {
                                     Text(
-                                        text = "Enregistrement en cours... Récitez calmement",
+                                        text = strings.rafiqRecordingInProgress,
                                         color = MaterialTheme.colorScheme.error,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Bold
@@ -251,14 +254,14 @@ fun RafiqCompanionScreen(
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                                         shape = RoundedCornerShape(24.dp)
                                     ) {
-                                        Text("Arrêter et Analyser ⏹")
+                                        Text(strings.rafiqStopAndAnalyze)
                                     }
                                 } else {
                                     Button(
                                         onClick = { viewModel.startRecording() },
                                         shape = RoundedCornerShape(24.dp)
                                     ) {
-                                        Text(if (lastTake != null) "Réenregistrer 🎙" else "Réciter dans le micro 🎙")
+                                        Text(if (lastTake != null) strings.rafiqReRecord else strings.rafiqRecordMicrophone)
                                     }
                                 }
 
@@ -275,7 +278,7 @@ fun RafiqCompanionScreen(
                                             },
                                             shape = RoundedCornerShape(20.dp)
                                         ) {
-                                            Text(if (isPlayingUser) "Stop ⏹" else "Ma voix ▶", fontSize = 12.sp)
+                                            Text(if (isPlayingUser) strings.rafiqStopAudio else strings.rafiqPlayMyVoice, fontSize = 12.sp)
                                         }
 
                                         FilledTonalButton(
@@ -284,7 +287,7 @@ fun RafiqCompanionScreen(
                                             },
                                             shape = RoundedCornerShape(20.dp)
                                         ) {
-                                            Text(if (isPlayingModel) "Stop ⏹" else "Cheikh (Modèle) ▶", fontSize = 12.sp)
+                                            Text(if (isPlayingModel) strings.rafiqStopAudio else strings.rafiqPlayModelSheikh, fontSize = 12.sp)
                                         }
                                     }
                                 }
@@ -293,6 +296,27 @@ fun RafiqCompanionScreen(
 
                         // Diagnostic Card (when recitation is analyzed)
                         diagnostic?.let { diag ->
+                            val pacingMsg = when (currentLanguage) {
+                                AppLanguage.ARABIC -> diag.pacingMessageAr
+                                AppLanguage.ENGLISH -> diag.pacingMessageEn.ifBlank { diag.pacingMessageFr }
+                                else -> diag.pacingMessageFr
+                            }
+                            val pauseMsg = when (currentLanguage) {
+                                AppLanguage.ARABIC -> diag.pauseMessageAr
+                                AppLanguage.ENGLISH -> diag.pauseMessageEn.ifBlank { diag.pauseMessageFr }
+                                else -> diag.pauseMessageFr
+                            }
+                            val stabilityMsg = when (currentLanguage) {
+                                AppLanguage.ARABIC -> diag.stabilityMessageAr
+                                AppLanguage.ENGLISH -> diag.stabilityMessageEn.ifBlank { diag.stabilityMessageFr }
+                                else -> diag.stabilityMessageFr
+                            }
+                            val disclaimerMsg = when (currentLanguage) {
+                                AppLanguage.ARABIC -> diag.pedagogicalDisclaimerAr
+                                AppLanguage.ENGLISH -> diag.pedagogicalDisclaimerEn
+                                else -> diag.pedagogicalDisclaimerFr
+                            }
+
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
@@ -320,9 +344,9 @@ fun RafiqCompanionScreen(
                                         ) {
                                             Text(
                                                 text = when (diag.pacingAssessment) {
-                                                    PacingAssessment.MEASURED_TARTIL -> "Tartil régulier"
-                                                    PacingAssessment.TOO_FAST_HADR -> "Rapide (Hadr)"
-                                                    PacingAssessment.ELONGATED_OR_HESITANT -> "Prolongé"
+                                                    PacingAssessment.MEASURED_TARTIL -> strings.rafiqPacingTartil
+                                                    PacingAssessment.TOO_FAST_HADR -> strings.rafiqPacingHadr
+                                                    PacingAssessment.ELONGATED_OR_HESITANT -> strings.rafiqPacingElongated
                                                 },
                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                                 style = MaterialTheme.typography.labelSmall,
@@ -333,19 +357,20 @@ fun RafiqCompanionScreen(
 
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = diag.pacingMessageFr,
+                                        text = pacingMsg,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
 
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        text = "• ${diag.pauseMessageFr}",
+                                        text = "• $pauseMsg",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
+                                    val stabilityText = String.format(java.util.Locale.getDefault(), strings.rafiqStabilityFormat, diag.energyStabilityPercent)
                                     Text(
-                                        text = "• ${diag.stabilityMessageFr} (Stabilité : ${diag.energyStabilityPercent}%)",
+                                        text = "• $stabilityMsg ($stabilityText)",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -354,15 +379,17 @@ fun RafiqCompanionScreen(
                                     if (diag.tajwidPointsToWatch.isNotEmpty()) {
                                         Spacer(modifier = Modifier.height(10.dp))
                                         Text(
-                                            text = "Points de Tajwid à surveiller sur ce verset :",
+                                            text = strings.rafiqTajwidPointsHeader,
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         diag.tajwidPointsToWatch.forEach { point ->
+                                            val ruleName = if (currentLanguage == AppLanguage.ARABIC) point.ruleNameAr else point.ruleNameFr
+                                            val explanation = if (currentLanguage == AppLanguage.ARABIC) point.explanationAr else point.explanationFr
                                             Text(
-                                                text = "✦ ${point.ruleNameFr} : ${point.targetSnippet} — ${point.explanationFr}",
+                                                text = "✦ $ruleName : ${point.targetSnippet} — $explanation",
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -371,7 +398,7 @@ fun RafiqCompanionScreen(
 
                                     Spacer(modifier = Modifier.height(10.dp))
                                     Text(
-                                        text = diag.pedagogicalDisclaimerFr,
+                                        text = disclaimerMsg,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -407,7 +434,7 @@ fun RafiqCompanionScreen(
                                         ) {
                                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("À consolider", fontSize = 12.sp)
+                                            Text(strings.rafiqMarkNeedsWork, fontSize = 12.sp)
                                         }
 
                                         Button(
@@ -417,7 +444,7 @@ fun RafiqCompanionScreen(
                                         ) {
                                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Maîtrisé ✓", fontSize = 12.sp)
+                                            Text(strings.rafiqMarkMastered, fontSize = 12.sp)
                                         }
                                     }
                                 }
@@ -434,13 +461,13 @@ fun RafiqCompanionScreen(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "Analyseur Vocal Rapide",
+                                    text = strings.rafiqQuickAnalyzerTitle,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Sélectionnez un verset spécifique pour analyser votre tempo et vérifier les règles de Tajwid.",
+                                    text = strings.rafiqQuickAnalyzerDesc,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -454,25 +481,25 @@ fun RafiqCompanionScreen(
                                         onClick = { viewModel.selectAyah(1, 1) },
                                         shape = RoundedCornerShape(20.dp)
                                     ) {
-                                        Text("Fatiha 1:1", fontSize = 12.sp)
+                                        Text("1:1", fontSize = 12.sp)
                                     }
                                     OutlinedButton(
                                         onClick = { viewModel.selectAyah(112, 1) },
                                         shape = RoundedCornerShape(20.dp)
                                     ) {
-                                        Text("Ikhlas 112:1", fontSize = 12.sp)
+                                        Text("112:1", fontSize = 12.sp)
                                     }
                                     OutlinedButton(
                                         onClick = { viewModel.selectAyah(114, 1) },
                                         shape = RoundedCornerShape(20.dp)
                                     ) {
-                                        Text("Nas 114:1", fontSize = 12.sp)
+                                        Text("114:1", fontSize = 12.sp)
                                     }
                                 }
 
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "Sourate $currentSurah — Verset $currentAyah",
+                                    text = String.format(java.util.Locale.getDefault(), strings.rafiqSurahAyahFormat, currentSurah, currentAyah),
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
@@ -494,7 +521,7 @@ fun RafiqCompanionScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(24.dp)
                                     ) {
-                                        Text("Arrêter et Analyser ⏹")
+                                        Text(strings.rafiqStopAndAnalyze)
                                     }
                                 } else {
                                     Button(
@@ -502,7 +529,7 @@ fun RafiqCompanionScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(24.dp)
                                     ) {
-                                        Text("Enregistrer et Analyser 🎙")
+                                        Text(if (lastTake != null) strings.rafiqReRecord else strings.rafiqRecordMicrophone)
                                     }
                                 }
                             }
@@ -510,6 +537,22 @@ fun RafiqCompanionScreen(
 
                         // Diagnostic view if available
                         diagnostic?.let { diag ->
+                            val pacingMsg = when (currentLanguage) {
+                                AppLanguage.ARABIC -> diag.pacingMessageAr
+                                AppLanguage.ENGLISH -> diag.pacingMessageEn.ifBlank { diag.pacingMessageFr }
+                                else -> diag.pacingMessageFr
+                            }
+                            val pauseMsg = when (currentLanguage) {
+                                AppLanguage.ARABIC -> diag.pauseMessageAr
+                                AppLanguage.ENGLISH -> diag.pauseMessageEn.ifBlank { diag.pauseMessageFr }
+                                else -> diag.pauseMessageFr
+                            }
+                            val stabilityMsg = when (currentLanguage) {
+                                AppLanguage.ARABIC -> diag.stabilityMessageAr
+                                AppLanguage.ENGLISH -> diag.stabilityMessageEn.ifBlank { diag.stabilityMessageFr }
+                                else -> diag.stabilityMessageFr
+                            }
+
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
                                 color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
@@ -517,14 +560,14 @@ fun RafiqCompanionScreen(
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text(
-                                        text = diag.pacingMessageFr,
+                                        text = pacingMsg,
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
-                                    Text(text = "• ${diag.pauseMessageFr}", style = MaterialTheme.typography.bodySmall)
-                                    Text(text = "• ${diag.stabilityMessageFr}", style = MaterialTheme.typography.bodySmall)
+                                    Text(text = "• $pauseMsg", style = MaterialTheme.typography.bodySmall)
+                                    Text(text = "• $stabilityMsg", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
@@ -550,7 +593,7 @@ fun RafiqCompanionScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(text = "Versets dus aujourd'hui :", style = MaterialTheme.typography.bodySmall)
+                                        Text(text = strings.rafiqDueVersesLabel, style = MaterialTheme.typography.bodySmall)
                                         Text(
                                             text = "${ag.dueForReview.size}",
                                             style = MaterialTheme.typography.bodySmall,
@@ -564,7 +607,7 @@ fun RafiqCompanionScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(text = "Versets à consolider :", style = MaterialTheme.typography.bodySmall)
+                                        Text(text = strings.rafiqWeakVersesLabel, style = MaterialTheme.typography.bodySmall)
                                         Text(
                                             text = "${ag.weakAyahs.size}",
                                             style = MaterialTheme.typography.bodySmall,
@@ -577,7 +620,7 @@ fun RafiqCompanionScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(text = "Total mémorisés :", style = MaterialTheme.typography.bodySmall)
+                                        Text(text = strings.rafiqTotalMemorizedLabel, style = MaterialTheme.typography.bodySmall)
                                         Text(
                                             text = "${ag.memorizedTotal}",
                                             style = MaterialTheme.typography.bodySmall,
@@ -591,9 +634,10 @@ fun RafiqCompanionScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(text = "Objectif quotidien suggéré :", style = MaterialTheme.typography.bodySmall)
+                                        Text(text = strings.rafiqDailyGoalLabel, style = MaterialTheme.typography.bodySmall)
+                                        val targetFormat = String.format(java.util.Locale.getDefault(), strings.rafiqDailyGoalFormat, ag.dailyTargetAyahs)
                                         Text(
-                                            text = "${ag.dailyTargetAyahs} versets / jour",
+                                            text = targetFormat,
                                             style = MaterialTheme.typography.bodySmall,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -605,14 +649,18 @@ fun RafiqCompanionScreen(
                                         HorizontalDivider()
                                         Spacer(modifier = Modifier.height(10.dp))
                                         Text(
-                                            text = "Leçon de Tajwid conseillée :",
+                                            text = strings.rafiqRecommendedTajwidLabel,
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
+                                        val tajwidTitle = when (currentLanguage) {
+                                            AppLanguage.ARABIC -> ag.recommendedTajwidTitleAr ?: ag.recommendedTajwidTitleFr ?: ""
+                                            else -> ag.recommendedTajwidTitleFr ?: ag.recommendedTajwidTitleAr ?: ""
+                                        }
                                         Text(
-                                            text = ag.recommendedTajwidTitleFr ?: "Règles fondamentales",
+                                            text = tajwidTitle,
                                             style = MaterialTheme.typography.bodySmall
                                         )
                                         if (onNavigateToTajwidLesson != null) {
@@ -621,7 +669,7 @@ fun RafiqCompanionScreen(
                                                 onClick = { onNavigateToTajwidLesson(lessonId) },
                                                 shape = RoundedCornerShape(20.dp)
                                             ) {
-                                                Text("Ouvrir la leçon ▶", fontSize = 12.sp)
+                                                Text(strings.rafiqOpenLesson, fontSize = 12.sp)
                                             }
                                         }
                                     }

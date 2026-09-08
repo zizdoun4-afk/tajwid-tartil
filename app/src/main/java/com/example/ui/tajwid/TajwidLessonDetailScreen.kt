@@ -339,7 +339,7 @@ fun TajwidExampleItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Sourate ${example.surahNumber} • Verset ${example.ayahNumber}",
+                    text = String.format(strings.rafiqSurahAyahFormat, example.surahNumber, example.ayahNumber),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

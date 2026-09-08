@@ -265,7 +265,7 @@ class RafiqCompanionViewModel(application: Application) : AndroidViewModel(appli
             val ayah = _currentAyahNumber.value
 
             if (isMastered) {
-                memorizationRepository.markReviewed(surah, ayah)
+                memorizationRepository.markMemorized(surah, ayah)
             } else {
                 memorizationRepository.setAyahStatus(surah, ayah, com.example.domain.model.MemorizationStatus.REVIEW)
             }

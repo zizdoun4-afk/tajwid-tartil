@@ -9,7 +9,8 @@ enum class AppLanguage(
     val layoutDirection: LayoutDirection
 ) {
     ARABIC("ar", "العربية", LayoutDirection.Rtl),
-    FRENCH("fr", "Français", LayoutDirection.Ltr)
+    FRENCH("fr", "Français", LayoutDirection.Ltr),
+    ENGLISH("en", "English", LayoutDirection.Ltr)
 }
 
 val LocalAppLanguage = compositionLocalOf { AppLanguage.ARABIC }

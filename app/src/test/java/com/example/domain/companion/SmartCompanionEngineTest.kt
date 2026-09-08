@@ -170,4 +170,45 @@ class SmartCompanionEngineTest {
         // Surah 112:1 has Qalqalah annotations in TajwidRepository
         assertTrue(diag.tajwidPointsToWatch.any { it.ruleNameFr.contains("Qalqalah") || it.targetSnippet.contains("أَحَد") })
     }
+
+    @Test
+    fun `test Rafiq validate mastered marks MEMORIZED with SRS schedule`() = runTest {
+        val repo = com.example.data.repository.MemorizationRepository(memDao)
+        memDao.items.add(
+            MemorizationStatusEntity(
+                surahNumber = 1,
+                ayahNumber = 5,
+                status = MemorizationStatus.LEARNING.name,
+                reviewCount = 1
+            )
+        )
+
+        // When user explicitly validates mastery in Rafiq:
+        val result = repo.markMemorized(1, 5)
+
+        assertEquals(MemorizationStatus.MEMORIZED.name, result.status)
+        assertEquals(MemorizationStatus.MEMORIZED, memDao.getStatusForAyah(1, 5)?.memorizationStatus)
+        assertNotNull(result.nextReviewDueEpochMillis)
+        assertTrue(result.nextReviewDueEpochMillis!! > System.currentTimeMillis())
+    }
+
+    @Test
+    fun `test Rafiq validate failed keeps or sets REVIEW and does NOT mark MEMORIZED`() = runTest {
+        val repo = com.example.data.repository.MemorizationRepository(memDao)
+        memDao.items.add(
+            MemorizationStatusEntity(
+                surahNumber = 1,
+                ayahNumber = 6,
+                status = MemorizationStatus.LEARNING.name,
+                reviewCount = 0
+            )
+        )
+
+        // When user does NOT master the ayah in Rafiq:
+        repo.setAyahStatus(1, 6, MemorizationStatus.REVIEW)
+
+        val updated = memDao.getStatusForAyah(1, 6)
+        assertEquals(MemorizationStatus.REVIEW, updated?.memorizationStatus)
+        assertTrue(updated?.memorizationStatus != MemorizationStatus.MEMORIZED)
+    }
 }
