@@ -3,7 +3,6 @@ package com.example.audio
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
-import android.media.PlaybackParams
 import android.net.Uri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +12,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+import android.os.Build
+import android.media.PlaybackParams
+
+enum class RepeatMode(val count: Int) {
+    OFF(0),
+    ONCE(1),
+    THREE_TIMES(3),
+    LOOP(999)
+}
 
 sealed class PlayerState {
     object Idle : PlayerState()
@@ -41,31 +50,30 @@ class AudioPlayer(private val context: Context) {
     private val _playbackSpeed = MutableStateFlow(1.0f)
     val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
-    private val _targetRepeatCount = MutableStateFlow(1) // 1x, 3x, 5x, 10x, -1 (Infinite)
-    val targetRepeatCount: StateFlow<Int> = _targetRepeatCount.asStateFlow()
+    private val _repeatMode = MutableStateFlow(RepeatMode.OFF)
+    val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
 
-    private var currentRepeatCounter = 1
+    private var currentRemainingRepeats = 0
 
     private var progressJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main)
 
-    fun setPlaybackSpeed(speed: Float) {
+    fun setSpeed(speed: Float) {
         _playbackSpeed.value = speed
-        try {
-            mediaPlayer?.let { mp ->
-                if (_playerState.value is PlayerState.Playing || _playerState.value is PlayerState.Paused) {
-                    val params = mp.playbackParams ?: PlaybackParams()
-                    params.speed = speed
-                    mp.playbackParams = params
+        mediaPlayer?.let { mp ->
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && mp.isPlaying) {
+                    mp.playbackParams = mp.playbackParams.setSpeed(speed)
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
-    fun setTargetRepeatCount(count: Int) {
-        _targetRepeatCount.value = count
+    fun setRepeatMode(mode: RepeatMode) {
+        _repeatMode.value = mode
+        currentRemainingRepeats = mode.count
     }
 
     fun play(dataSource: String, onComplete: (() -> Unit)? = null) {
@@ -82,7 +90,7 @@ class AudioPlayer(private val context: Context) {
 
         _currentSource.value = dataSource
         _playerState.value = PlayerState.Loading
-        currentRepeatCounter = 1
+        currentRemainingRepeats = _repeatMode.value.count
 
         try {
             val player = MediaPlayer().apply {
@@ -101,12 +109,12 @@ class AudioPlayer(private val context: Context) {
 
                 setOnPreparedListener { mp ->
                     _durationMs.value = mp.duration.toLong()
-                    try {
-                        val params = mp.playbackParams ?: PlaybackParams()
-                        params.speed = _playbackSpeed.value
-                        mp.playbackParams = params
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && _playbackSpeed.value != 1.0f) {
+                        try {
+                            mp.playbackParams = mp.playbackParams.setSpeed(_playbackSpeed.value)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
                     mp.start()
                     _playerState.value = PlayerState.Playing
@@ -114,12 +122,12 @@ class AudioPlayer(private val context: Context) {
                 }
 
                 setOnCompletionListener { mp ->
-                    val target = _targetRepeatCount.value
-                    if (target == -1 || currentRepeatCounter < target) {
-                        currentRepeatCounter++
+                    if (currentRemainingRepeats > 0) {
+                        if (currentRemainingRepeats != RepeatMode.LOOP.count) {
+                            currentRemainingRepeats--
+                        }
                         mp.seekTo(0)
                         mp.start()
-                        _positionMs.value = 0L
                     } else {
                         _playerState.value = PlayerState.Idle
                         _positionMs.value = _durationMs.value
@@ -199,7 +207,6 @@ class AudioPlayer(private val context: Context) {
         _currentSource.value = null
         _positionMs.value = 0L
         _durationMs.value = 0L
-        currentRepeatCounter = 1
     }
 
     private fun startProgressTracker() {

@@ -10,6 +10,8 @@ import com.example.domain.model.RecitationStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_settings")
 
 class UserPreferencesRepository(private val context: Context) {
@@ -19,6 +21,11 @@ class UserPreferencesRepository(private val context: Context) {
         val PREFERRED_STYLE = stringPreferencesKey("preferred_recitation_style")
         val THEME_ID = stringPreferencesKey("selected_theme_id")
         val LANGUAGE_CODE = stringPreferencesKey("selected_language_code")
+        val BOOKMARKS = stringSetPreferencesKey("bookmarked_ayahs")
+    }
+
+    val bookmarkedAyahs: Flow<Set<String>> = context.dataStore.data.map { prefs ->
+        prefs[Keys.BOOKMARKS] ?: emptySet()
     }
 
     val selectedLanguage: Flow<com.example.ui.i18n.AppLanguage> = context.dataStore.data.map { prefs ->
@@ -65,5 +72,23 @@ class UserPreferencesRepository(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[Keys.LANGUAGE_CODE] = language.code
         }
+    }
+
+    suspend fun toggleBookmark(surahNumber: Int, ayahNumber: Int): Boolean {
+        var isAdded = false
+        val keyStr = "$surahNumber:$ayahNumber"
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.BOOKMARKS] ?: emptySet()
+            val mutable = current.toMutableSet()
+            if (mutable.contains(keyStr)) {
+                mutable.remove(keyStr)
+                isAdded = false
+            } else {
+                mutable.add(keyStr)
+                isAdded = true
+            }
+            prefs[Keys.BOOKMARKS] = mutable
+        }
+        return isAdded
     }
 }

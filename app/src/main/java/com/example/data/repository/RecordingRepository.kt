@@ -79,6 +79,16 @@ class RecordingRepository(
         recordingDao.deleteRecordingById(recording.id)
     }
 
+    suspend fun deleteRecordings(recordings: List<UserRecording>) = withContext(Dispatchers.IO) {
+        recordings.forEach { recording ->
+            val file = File(recording.filePath)
+            if (file.exists()) {
+                file.delete()
+            }
+            recordingDao.deleteRecordingById(recording.id)
+        }
+    }
+
     fun shareRecording(recording: UserRecording) {
         val file = File(recording.filePath)
         if (!file.exists()) return

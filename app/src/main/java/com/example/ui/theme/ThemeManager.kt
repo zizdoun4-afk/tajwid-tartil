@@ -8,20 +8,16 @@ import androidx.compose.ui.graphics.Color
 
 data class AppThemeDefinition(
     val id: String,
-    val displayNameFr: String,
-    val descriptionFr: String,
-    val displayNameAr: String,
-    val descriptionAr: String,
+    val displayName: String,
+    val description: String,
     val isDark: Boolean,
     val colorScheme: ColorScheme
 )
 
 val ZelligeTheme = AppThemeDefinition(
     id = "zellige",
-    displayNameFr = "Zellige Marocain",
-    descriptionFr = "Vert émeraude profond & Or traditionnel",
-    displayNameAr = "الزليج المغربي",
-    descriptionAr = "أخضر زمردي عميق وذهب تقليدي",
+    displayName = "Zellige Marocain",
+    description = "Vert émeraude profond & Or traditionnel",
     isDark = false,
     colorScheme = lightColorScheme(
         primary = ZelligeEmeraldPrimary,
@@ -43,10 +39,8 @@ val ZelligeTheme = AppThemeDefinition(
 
 val NuitTheme = AppThemeDefinition(
     id = "nuit",
-    displayNameFr = "Nuit Émeraude",
-    descriptionFr = "Sombre élégant & Or lumineux",
-    displayNameAr = "الليل الزمردي",
-    descriptionAr = "داكن أنيق وذهب مضيء",
+    displayName = "Nuit Émeraude",
+    description = "Sombre élégant & Or lumineux",
     isDark = true,
     colorScheme = darkColorScheme(
         primary = NuitGoldPrimary,
@@ -68,10 +62,8 @@ val NuitTheme = AppThemeDefinition(
 
 val DesertTheme = AppThemeDefinition(
     id = "desert",
-    displayNameFr = "Sable & Oasis",
-    descriptionFr = "Ocre chaleureux & Oasis émeraude",
-    displayNameAr = "الرمل والواحة",
-    descriptionAr = "طبيعي دافئ وواحة زمردية",
+    displayName = "Sable & Oasis",
+    description = "Ocre chaleureux & Oasis émeraude",
     isDark = false,
     colorScheme = lightColorScheme(
         primary = DesertOchrePrimary,

@@ -13,8 +13,11 @@ import kotlinx.coroutines.flow.map
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 
+import org.json.JSONArray
+
 class QuranRepository(
     private val quranCacheDao: QuranCacheDao,
+    private val context: Context? = null,
     private val api: AlQuranApi = Retrofit.Builder()
         .baseUrl(AlQuranApi.BASE_URL)
         .addConverterFactory(MoshiConverterFactory.create())
@@ -27,17 +30,43 @@ class QuranRepository(
             if (cachedList.isNotEmpty()) {
                 cachedList.map { it.toDomain() }
             } else {
-                DEFAULT_SURAHS
+                getDefaultSurahs()
             }
         }
+    }
+
+    fun getDefaultSurahs(): List<Surah> {
+        if (context != null) {
+            try {
+                val json = context.assets.open("surahs.json").bufferedReader().use { it.readText() }
+                val array = JSONArray(json)
+                val list = mutableListOf<Surah>()
+                for (i in 0 until array.length()) {
+                    val obj = array.getJSONObject(i)
+                    list.add(
+                        Surah(
+                            number = obj.getInt("number"),
+                            name = obj.getString("name"),
+                            englishName = obj.getString("englishName"),
+                            englishNameTranslation = obj.getString("englishNameTranslation"),
+                            numberOfAyahs = obj.getInt("numberOfAyahs"),
+                            revelationType = obj.getString("revelationType")
+                        )
+                    )
+                }
+                if (list.isNotEmpty()) return list
+            } catch (e: Exception) {
+                // Fallback to in-memory list
+            }
+        }
+        return DEFAULT_SURAHS
     }
 
     suspend fun fetchAndCacheSurahList(): Result<List<Surah>> {
         return try {
             val response = api.getAllSurahs()
-            val dataList = response.data
-            if (response.code == 200 && !dataList.isNullOrEmpty()) {
-                val surahs = dataList.map { dto ->
+            if (response.code == 200 && response.data.isNotEmpty()) {
+                val surahs = response.data.map { dto ->
                     Surah(
                         number = dto.number,
                         name = dto.name,
@@ -82,9 +111,8 @@ class QuranRepository(
         // Otherwise fetch from Remote API
         return try {
             val response = api.getSurahUthmani(surahNumber)
-            val surahData = response.data
-            if (response.code == 200 && surahData != null) {
-                val ayahs = surahData.ayahs.map { dto ->
+            if (response.code == 200 && response.data != null) {
+                val ayahs = response.data.ayahs.map { dto ->
                     Ayah(
                         number = dto.number,
                         text = dto.text,

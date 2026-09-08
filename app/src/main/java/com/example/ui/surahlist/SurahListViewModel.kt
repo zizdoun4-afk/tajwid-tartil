@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.db.AppDatabase
-import com.example.data.local.db.BookmarkEntity
 import com.example.data.repository.QuranRepository
 import com.example.domain.model.Surah
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,8 +16,6 @@ import kotlinx.coroutines.launch
 data class SurahListUiState(
     val isLoading: Boolean = false,
     val surahs: List<Surah> = emptyList(),
-    val bookmarks: List<BookmarkEntity> = emptyList(),
-    val isShowingBookmarks: Boolean = false,
     val searchQuery: String = "",
     val errorMessage: String? = null
 )
@@ -26,8 +23,7 @@ data class SurahListUiState(
 class SurahListViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getInstance(application)
-    private val repository = QuranRepository(db.quranCacheDao())
-    private val bookmarkDao = db.bookmarkDao()
+    private val repository = QuranRepository(db.quranCacheDao(), application)
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -35,22 +31,18 @@ class SurahListViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    private val _isShowingBookmarks = MutableStateFlow(false)
-    val isShowingBookmarks: StateFlow<Boolean> = _isShowingBookmarks.asStateFlow()
-
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     private val _allSurahs = MutableStateFlow<List<Surah>>(emptyList())
-    private val _allBookmarks = MutableStateFlow<List<BookmarkEntity>>(emptyList())
 
     val uiState: StateFlow<SurahListUiState> = combine(
+        _isLoading,
         _allSurahs,
-        _allBookmarks,
-        _isShowingBookmarks,
-        _searchQuery
-    ) { surahs, bookmarks, showBookmarks, query ->
-        val filteredSurahs = if (query.isBlank()) {
+        _searchQuery,
+        _errorMessage
+    ) { loading, surahs, query, error ->
+        val filtered = if (query.isBlank()) {
             surahs
         } else {
             surahs.filter { surah ->
@@ -60,22 +52,11 @@ class SurahListViewModel(application: Application) : AndroidViewModel(applicatio
                 surah.number.toString() == query.trim()
             }
         }
-        val filteredBookmarks = if (query.isBlank()) {
-            bookmarks
-        } else {
-            bookmarks.filter { bm ->
-                bm.surahName.contains(query, ignoreCase = true) ||
-                bm.ayahText.contains(query, ignoreCase = true) ||
-                bm.surahNumber.toString() == query.trim()
-            }
-        }
         SurahListUiState(
-            isLoading = surahs.isEmpty(),
-            surahs = filteredSurahs,
-            bookmarks = filteredBookmarks,
-            isShowingBookmarks = showBookmarks,
+            isLoading = loading,
+            surahs = filtered,
             searchQuery = query,
-            errorMessage = _errorMessage.value
+            errorMessage = error
         )
     }.stateIn(
         scope = viewModelScope,
@@ -85,7 +66,6 @@ class SurahListViewModel(application: Application) : AndroidViewModel(applicatio
 
     init {
         loadSurahs()
-        observeBookmarks()
     }
 
     fun loadSurahs() {
@@ -106,24 +86,6 @@ class SurahListViewModel(application: Application) : AndroidViewModel(applicatio
             if (result.isFailure) {
                 // Keep displaying fallback list silently or show subtle notice if list empty
             }
-        }
-    }
-
-    private fun observeBookmarks() {
-        viewModelScope.launch {
-            bookmarkDao.getAllBookmarks().collect { list ->
-                _allBookmarks.value = list
-            }
-        }
-    }
-
-    fun setShowBookmarks(show: Boolean) {
-        _isShowingBookmarks.value = show
-    }
-
-    fun removeBookmark(surahNumber: Int, ayahNumber: Int) {
-        viewModelScope.launch {
-            bookmarkDao.deleteBookmark(surahNumber, ayahNumber)
         }
     }
 

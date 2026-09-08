@@ -1,9 +1,12 @@
 package com.example.ui.main
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,23 +32,28 @@ import androidx.navigation.navArgument
 import com.example.ui.ayahreader.AyahReaderScreen
 import com.example.ui.ayahreader.AyahReaderViewModel
 import com.example.ui.i18n.LocalAppStrings
+import com.example.ui.memorization.MemorizationScreen
+import com.example.ui.memorization.MemorizationViewModel
 import com.example.ui.recordingslibrary.RecordingsLibraryScreen
 import com.example.ui.recordingslibrary.RecordingsLibraryViewModel
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.settings.SettingsViewModel
 import com.example.ui.surahlist.SurahListScreen
 import com.example.ui.surahlist.SurahListViewModel
+import com.example.ui.training.TrainingSessionScreen
+import com.example.ui.training.TrainingSessionViewModel
 
 sealed class BottomNavRoute(val route: String, val icon: ImageVector) {
-    object Surahs : BottomNavRoute("surahs", Icons.AutoMirrored.Filled.MenuBook)
+    object Surahs : BottomNavRoute("surahs", Icons.Default.MenuBook)
     object Library : BottomNavRoute("library", Icons.Default.LibraryMusic)
+    object Memorization : BottomNavRoute("memorization", Icons.Default.Psychology)
     object Settings : BottomNavRoute("settings", Icons.Default.Settings)
 }
 
 val BOTTOM_NAV_ITEMS = listOf(
     BottomNavRoute.Surahs,
     BottomNavRoute.Library,
-    BottomNavRoute.Settings
+    BottomNavRoute.Memorization
 )
 
 @Composable
@@ -63,13 +71,15 @@ fun MainScreen(
             if (isBottomBarVisible) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    contentColor = MaterialTheme.colorScheme.primary
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    tonalElevation = 2.dp
                 ) {
                     BOTTOM_NAV_ITEMS.forEach { item ->
                         val selected = currentRoute == item.route
                         val labelText = when (item) {
                             BottomNavRoute.Surahs -> strings.navSurahs
                             BottomNavRoute.Library -> strings.navLibrary
+                            BottomNavRoute.Memorization -> strings.navMemorization
                             BottomNavRoute.Settings -> strings.navSettings
                         }
                         NavigationBarItem(
@@ -88,10 +98,16 @@ fun MainScreen(
                             icon = {
                                 Icon(
                                     imageVector = item.icon,
-                                    contentDescription = labelText
+                                    contentDescription = labelText,
+                                    modifier = Modifier.size(24.dp)
                                 )
                             },
-                            label = { Text(labelText) },
+                            label = { 
+                                Text(
+                                    text = labelText,
+                                    style = MaterialTheme.typography.labelSmall
+                                ) 
+                            },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                 selectedTextColor = MaterialTheme.colorScheme.primary,
@@ -117,6 +133,9 @@ fun MainScreen(
                     viewModel = surahViewModel,
                     onSurahClick = { surahNum ->
                         navController.navigate("reader/$surahNum")
+                    },
+                    onSettingsClick = {
+                        navController.navigate(BottomNavRoute.Settings.route)
                     }
                 )
             }
@@ -125,6 +144,16 @@ fun MainScreen(
                 val recordingsViewModel: RecordingsLibraryViewModel = viewModel()
                 RecordingsLibraryScreen(
                     viewModel = recordingsViewModel
+                )
+            }
+
+            composable(BottomNavRoute.Memorization.route) {
+                val memorizationViewModel: MemorizationViewModel = viewModel()
+                MemorizationScreen(
+                    viewModel = memorizationViewModel,
+                    onStartTraining = { surahNum, ayahNum ->
+                        navController.navigate("training/$surahNum/$ayahNum")
+                    }
                 )
             }
 
@@ -152,6 +181,36 @@ fun MainScreen(
 
                 AyahReaderScreen(
                     viewModel = ayahViewModel,
+                    onBackClick = {
+                        navController.popBackStack()
+                    },
+                    onStartTraining = { sNum, aNum ->
+                        navController.navigate("training/$sNum/$aNum")
+                    }
+                )
+            }
+
+            composable(
+                route = "training/{surahNumber}/{ayahNumber}",
+                arguments = listOf(
+                    navArgument("surahNumber") { type = NavType.IntType },
+                    navArgument("ayahNumber") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+                val surahNumber = backStackEntry.arguments?.getInt("surahNumber") ?: 1
+                val ayahNumber = backStackEntry.arguments?.getInt("ayahNumber") ?: 1
+                val trainingViewModel: TrainingSessionViewModel = viewModel(
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        @Suppress("UNCHECKED_CAST")
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            val app = (navController.context.applicationContext as android.app.Application)
+                            return TrainingSessionViewModel(app, surahNumber, ayahNumber) as T
+                        }
+                    }
+                )
+
+                TrainingSessionScreen(
+                    viewModel = trainingViewModel,
                     onBackClick = {
                         navController.popBackStack()
                     }

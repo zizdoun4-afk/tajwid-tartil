@@ -2,6 +2,7 @@ package com.example.data.local.db
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.example.audio.SessionMarker
 import com.example.domain.model.UserRecording
 
 @Entity(tableName = "recordings")
@@ -14,7 +15,8 @@ data class RecordingEntity(
     val filePath: String,
     val durationMs: Long,
     val recordedAtEpochMillis: Long,
-    val customLabel: String? = null
+    val customLabel: String? = null,
+    val markers: List<SessionMarker>? = null
 ) {
     fun toDomain(): UserRecording = UserRecording(
         id = id,
@@ -25,7 +27,8 @@ data class RecordingEntity(
         filePath = filePath,
         durationMs = durationMs,
         recordedAtEpochMillis = recordedAtEpochMillis,
-        customLabel = customLabel
+        customLabel = customLabel,
+        markers = markers
     )
 
     companion object {
@@ -38,7 +41,8 @@ data class RecordingEntity(
             filePath = domain.filePath,
             durationMs = domain.durationMs,
             recordedAtEpochMillis = domain.recordedAtEpochMillis,
-            customLabel = domain.customLabel
+            customLabel = domain.customLabel,
+            markers = domain.markers
         )
     }
 }

@@ -1,0 +1,174 @@
+# Audit consolidé — Tajwid & Tartil
+> Document préparé pour être donné tel quel à Gemini (AI Studio) comme spec d'implémentation.
+> Source : analyse du code réel (zip uploadé) + idée produit "Hifz/Mémorisation" proposée en discussion.
+
+---
+
+## 0. Résumé exécutif
+
+L'app a déjà un excellent socle technique (lecteur audio, moteur d'enregistrement Take/Session, cache Room, bibliothèque). Elle manque une couche produit : la **mémorisation** (Hifz). Avant d'ajouter cette couche, **6 bugs/dettes techniques doivent être corrigés**, sinon la nouvelle fonctionnalité va hériter des mêmes failures.
+
+Ordre d'exécution recommandé pour Gemini :
+1. Corriger les bugs critiques (section 1)
+2. Nettoyer le code mort / dette (section 2)
+3. Implémenter la couche Mémorisation (section 3) — additive, ne touche pas au Reader existant
+4. Nouvel onglet "حفظي" + dashboard (section 4)
+
+---
+
+## 1. Bugs critiques à corriger EN PREMIER
+
+### 1.1 `AyahReaderViewModel.onCleared()` — fuite ressource audio
+Fichier : `app/src/main/java/com/example/ui/ayahreader/AyahReaderViewModel.kt`
+
+```kotlin
+override fun onCleared() {
+    super.onCleared()
+    audioPlayer.release()
+    viewModelScope.launch {   // ❌ viewModelScope déjà annulé ici, ce bloc ne s'exécute quasiment jamais
+        quranRecorderEngine.discardTake()
+        quranRecorderEngine.discardSession()
+    }
+}
+```
+**Impact** : si l'utilisateur quitte l'écran pendant un enregistrement (Take ou Session), le `MediaRecorder` n'est jamais arrêté/libéré proprement → fichier temp orphelin, micro potentiellement bloqué pour l'écran suivant.
+
+**Fix attendu** : utiliser un scope indépendant qui survit à `onCleared()` (ex: `CoroutineScope(SupervisorJob() + Dispatchers.Default)` dédié au cleanup), ou rendre `discardTake()`/`discardSession()` appelables de façon synchrone/bloquante pour ce cas précis.
+
+### 1.2 Double persistance divergente (JSON + Room)
+Fichiers : `RecitationsStore.kt`, `RecordingRepository.kt`, `AyahReaderViewModel.kt`
+
+`RecitationsStore.saveAyahRecording()` / `saveSessionRecording()` écrit dans **deux systèmes** :
+- son propre index `index.json` (`filesDir/recitations/`)
+- puis un sync manuel vers `RecordingDao` (Room), avec un chemin de fichier recalculé séparément
+
+**Impact** : si un des deux writes échoue (crash, stockage plein), le Reader (JSON) et la Bibliothèque (Room) divergent — un enregistrement visible dans l'un, absent dans l'autre.
+
+**Fix attendu** : Room devient l'unique source de vérité. `RecitationsStore` ne garde que des helpers de fichiers (chemins, copie audio), plus d'index JSON parallèle. Les `markers` de session (liste `SessionMarker`) deviennent une colonne JSON dans `RecordingEntity` via un `TypeConverter` Room (Moshi), pas un fichier séparé.
+
+### 1.3 `fallbackToDestructiveMigration()` sur la DB
+Fichier : `AppDatabase.kt`, actuellement `version = 1`
+
+**Impact** : dès qu'un futur changement de schéma est nécessaire (ex: pour la mémorisation, section 3), Room **supprime toute la table `recordings`** au prochain lancement → perte de la bibliothèque utilisateur, fichiers `.m4a` orphelins sur disque.
+
+**Fix attendu** : avant tout ajout de table/colonne, remplacer par une vraie stratégie de `Migration` Room (même simple, `ADD COLUMN`).
+
+### 1.4 `RecitationStyle.fallbackFolder` jamais branché
+Fichier : `RecitationStyle.kt` — le champ existe (`fallbackFolder = "Abdul_Basit_Murattal_64kbps"`) mais grep confirme **zéro usage** dans le code.
+
+**Fix attendu** : dans `AudioPlayer`/`AyahReaderViewModel`, si le stream réseau échoue (`PlayerState.Error`), retenter automatiquement avec l'URL construite via `fallbackFolder` avant d'afficher une erreur à l'utilisateur.
+
+### 1.5 `markNextAyahInSession()` — verset final silencieux
+Fichier : `AyahReaderViewModel.kt`
+
+```kotlin
+fun markNextAyahInSession() {
+    val currentIndex = _uiState.value.currentAyahIndex
+    if (currentIndex < ayahs.size - 1) { ... }
+    // sinon : rien ne se passe, aucun feedback
+}
+```
+**Impact** : si l'utilisateur est sur le dernier verset de la sourate pendant une Session et tape "verset suivant", rien ne se passe sans message.
+
+**Fix attendu** : afficher un message ("Fin de la sourate — arrêtez la session") ou déclencher automatiquement `requestStopSession()`.
+
+### 1.6 Code mort : `AudioRecorder.kt`
+Jamais instancié nulle part (`QuranRecorderEngine` fait tout le travail réel d'enregistrement).
+
+**Fix attendu** : supprimer le fichier entièrement pour éviter la confusion avec `QuranRecorderEngine`.
+
+---
+
+## 2. Dette technique secondaire (non bloquante, à faire si le temps permet)
+
+- `QuranRepository.DEFAULT_SURAHS` : liste statique de 114 sourates codée en dur dans le `.kt` → déplacer vers `assets/surahs.json` chargé au premier lancement, plus facile à maintenir.
+- `RecitationsStore.generateRandomId()` : génère un ID sur 10 caractères sans vérifier l'unicité contre les IDs existants — collision improbable mais non garantie. Utiliser `UUID.randomUUID()`.
+
+---
+
+## 3. Nouvelle fonctionnalité : Mémorisation (Hifz) — idée validée
+
+**Principe général** (reprend l'idée proposée en discussion) : ne pas construire un nouvel "assistant Coran" séparé. Ajouter une couche de mémorisation **par-dessus** l'existant, sans casser le Reader/Recorder actuels.
+
+### 3.1 Modèle de données (additif, nécessite la Migration Room de la section 1.3)
+
+```kotlin
+enum class MemorizationStatus { NEW, LEARNING, REVIEW, MEMORIZED }
+
+@Entity(tableName = "memorization_status")
+data class MemorizationStatusEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val surahNumber: Int,
+    val ayahNumber: Int,
+    val status: String,              // MemorizationStatus.name
+    val lastReviewedAtEpochMillis: Long? = null,
+    val nextReviewDueEpochMillis: Long? = null,   // pour une future répétition espacée
+    val reviewCount: Int = 0
+)
+```
+
+Dao : `getStatusForSurah(surahNumber)`, `upsertStatus(entity)`, `getDueForReview(nowMillis)`, `getWeeklyStats(sinceMillis)`.
+
+### 3.2 Point d'accroche dans le flow existant (non-intrusif)
+
+Dans `AyahReaderViewModel.stopTakeAndSave()`, **après** la sauvegarde réussie de l'enregistrement, déclencher un état UI :
+
+```
+"Ajouter ce verset à ma révision ?"   [Oui]   [Plus tard]
+```
+
+Si "Oui" → `upsertStatus(surah, ayah, status = LEARNING)`. Aucune modification du comportement actuel si l'utilisateur ignore le prompt.
+
+### 3.3 Session de training orchestrée (réutilise le moteur audio existant)
+
+Nouvel écran `TrainingSessionScreen` qui enchaîne, pour un verset donné :
+1. Écoute du récitateur référence ×3 (réutilise `AudioPlayer` + `RepeatMode`)
+2. Lecture accompagnée (affichage texte + audio simultané)
+3. Enregistrement (réutilise `QuranRecorderEngine.startTake()`)
+4. Réécoute de son propre enregistrement (réutilise `audioPlayer.togglePlayPause()`)
+5. Test sans regarder le texte (masquer le texte arabe, afficher seulement après validation)
+
+→ Aucun nouveau moteur audio/enregistrement à écrire, uniquement de l'orchestration UI au-dessus de l'existant.
+
+### 3.4 États par verset dans le Reader
+
+Dans `AyahReaderScreen`, indicateur visuel par verset basé sur `MemorizationStatus` (ex: pastille de couleur), en plus du `recordedAyahMap` déjà existant pour les enregistrements.
+
+---
+
+## 4. Nouvel onglet "حفظي" (Ma mémorisation)
+
+Navigation actuelle (à confirmer dans `MainScreen.kt`) : Sourates / Bibliothèque / Réglages.
+Ajouter un 3ᵉ onglet (pas 5), pour ne pas surcharger la bottom nav :
+
+```
+📖 القرآن (existant)
+🎙️ تلاوتي (Bibliothèque, existant)
+🧠 حفظي (NOUVEAU)
+```
+
+Contenu de l'onglet "حفظي" :
+- **Suivi du jour** : versets à réviser aujourd'hui (`getDueForReview`)
+- **Mes sourates** : progression % par sourate (mémorisés / total ayahs)
+- **Révision** : liste des versets en status REVIEW
+- **Test** : mode masqué (réutilise 3.3 étape 5)
+- **Progrès** : stats hebdo — versets révisés, nouveaux versets, nombre de sessions training, minutes de récitation cumulées (agrégation de `RecordingEntity.durationMs` + `MemorizationStatusEntity`)
+
+Réglages (`SettingsScreen.kt`) reste indépendant, inchangé.
+
+---
+
+## 5. IA (phase finale, hors scope immédiat)
+
+À ajouter **seulement** une fois les sections 1 à 4 stables et testées. Exemple d'usage ciblé plutôt que "IA pour faire IA" :
+> "Vous avez répété le verset 7 plusieurs fois cette semaine — voulez-vous le programmer pour révision demain ?"
+
+Basé sur `reviewCount` / fréquence d'enregistrement déjà disponible dans les données du §3.1 — ne nécessite pas de modèle externe pour une première version, juste une règle heuristique sur les données existantes.
+
+---
+
+## 6. Ce qu'il ne faut PAS toucher
+
+- `AudioPlayer.kt`, `QuranRecorderEngine.kt` : moteurs stables, à réutiliser tels quels (voir §3.3)
+- `QuranRepository`/API `alquran.cloud` : fonctionne, ne pas remplacer
+- Flow de lecture des sourates existant (`SurahListScreen`, navigation) : la mémorisation se greffe dessus, ne le remplace pas

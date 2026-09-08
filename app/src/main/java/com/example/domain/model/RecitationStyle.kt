@@ -13,4 +13,10 @@ enum class RecitationStyle(
         val ayahPart = ayahNumber.toString().padStart(3, '0')
         return "https://everyayah.com/data/$everyAyahFolder/$surahPart$ayahPart.mp3"
     }
+
+    fun buildFallbackAudioUrl(surahNumber: Int, ayahNumber: Int): String {
+        val surahPart = surahNumber.toString().padStart(3, '0')
+        val ayahPart = ayahNumber.toString().padStart(3, '0')
+        return "https://everyayah.com/data/$fallbackFolder/$surahPart$ayahPart.mp3"
+    }
 }

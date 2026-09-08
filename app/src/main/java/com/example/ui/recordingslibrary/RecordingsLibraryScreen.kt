@@ -24,18 +24,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -58,13 +61,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.audio.PlayerState
 import com.example.domain.model.UserRecording
+import com.example.ui.components.ReciterNameTextField
 import com.example.ui.components.ZelligeHeader
 import com.example.ui.i18n.LocalAppStrings
 import java.text.SimpleDateFormat
@@ -81,8 +88,8 @@ fun RecordingsLibraryScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playerState by viewModel.audioPlayer.playerState.collectAsStateWithLifecycle()
     val activeSource by viewModel.audioPlayer.currentSource.collectAsStateWithLifecycle()
-    val positionMs by viewModel.audioPlayer.positionMs.collectAsStateWithLifecycle()
-    val durationMs by viewModel.audioPlayer.durationMs.collectAsStateWithLifecycle()
+    val playPosition by viewModel.audioPlayer.positionMs.collectAsStateWithLifecycle()
+    val activeDuration by viewModel.audioPlayer.durationMs.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.message) {
         uiState.message?.let { msg ->
@@ -102,6 +109,132 @@ fun RecordingsLibraryScreen(
             subtitle = strings.librarySubtitle,
             arabicTitle = strings.libraryHeaderArabic
         )
+
+        // Statistics Summary Dashboard Card
+        val allRecordings = remember(uiState.groupedRecordings) {
+            uiState.groupedRecordings.flatMap { it.recordings }
+        }
+        val totalCount = allRecordings.size
+        val totalDurationMs = remember(allRecordings) { allRecordings.sumOf { it.durationMs } }
+        val uniqueSurahsCount = remember(allRecordings) { allRecordings.map { it.surahNumber }.distinct().size }
+        val formattedDuration = remember(totalDurationMs) {
+            val totalSeconds = totalDurationMs / 1000
+            val mins = totalSeconds / 60
+            val secs = totalSeconds % 60
+            if (mins > 0) "${mins}m ${secs}s" else "${secs}s"
+        }
+
+        if (allRecordings.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = strings.statsTitle,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceAround
+                    ) {
+                        StatItem(
+                            icon = "🎙️",
+                            value = "$totalCount",
+                            label = strings.totalRecordingsLabel
+                        )
+                        StatItem(
+                            icon = "⏱️",
+                            value = formattedDuration,
+                            label = strings.totalDurationLabel
+                        )
+                        StatItem(
+                            icon = "📖",
+                            value = "$uniqueSurahsCount",
+                            label = strings.practicedSurahsLabel
+                        )
+                    }
+                }
+            }
+
+            // Batch Actions Toolbar: Select All / Delete All / Delete Selected
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Select / Deselect All Button
+                val isAllSelected = uiState.selectedRecordingIds.size == allRecordings.size && allRecordings.isNotEmpty()
+                TextButton(
+                    onClick = {
+                        if (isAllSelected) viewModel.deselectAll() else viewModel.selectAll()
+                    },
+                    modifier = Modifier.testTag("select_all_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SelectAll,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isAllSelected) strings.deselectAll else strings.selectAll,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Delete Selected Items Button
+                    if (uiState.selectedRecordingIds.isNotEmpty()) {
+                        Button(
+                            onClick = { viewModel.deleteSelectedRecordings() },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.testTag("delete_selected_button")
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = String.format(strings.deleteSelectedRecordings, uiState.selectedRecordingIds.size),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Delete All (Total Sup) Button
+                    Button(
+                        onClick = { viewModel.showDeleteAllConfirmDialog() },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.testTag("delete_all_recordings_button")
+                    ) {
+                        Icon(Icons.Default.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = strings.deleteAllRecordings,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
 
         // Search Field
         OutlinedTextField(
@@ -190,15 +323,21 @@ fun RecordingsLibraryScreen(
                     ) { recording ->
                         val isActive = activeSource == recording.filePath
                         val isPlayingThis = isActive && playerState is PlayerState.Playing
+                        val currentPos = if (isActive) playPosition else 0L
+                        val maxDuration = if (isActive && activeDuration > 0) activeDuration else recording.durationMs
+                        val isSelected = uiState.selectedRecordingIds.contains(recording.id)
 
                         RecordingCardItem(
                             recording = recording,
                             isPlaying = isPlayingThis,
                             isActive = isActive,
-                            positionMs = if (isActive) positionMs else 0L,
-                            durationMs = if (isActive && durationMs > 0) durationMs else recording.durationMs,
+                            isSelected = isSelected,
+                            isSelectionMode = uiState.isSelectionMode,
+                            currentPositionMs = currentPos,
+                            totalDurationMs = maxDuration,
+                            onToggleSelect = { viewModel.toggleSelectRecording(recording.id) },
+                            onSeek = { newPos -> viewModel.audioPlayer.seekTo(newPos) },
                             onPlayClick = { viewModel.playRecording(recording) },
-                            onSeek = { seekPos -> viewModel.audioPlayer.seekTo(seekPos) },
                             onShareClick = { viewModel.shareRecording(recording) },
                             onCopyClick = { viewModel.copyToDownloads(recording) },
                             onRenameClick = { viewModel.showRenameDialog(recording) },
@@ -220,18 +359,32 @@ fun RecordingsLibraryScreen(
             title = { Text(strings.renameDialogTitle, fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
+                    ReciterNameTextField(
                         value = reciterName,
                         onValueChange = { reciterName = it },
-                        label = { Text(strings.reciterNameLabel) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
+                        label = strings.reciterNameLabel,
+                        testTag = "rename_reciter_input"
                     )
                     OutlinedTextField(
                         value = customLabel,
                         onValueChange = { customLabel = it },
                         label = { Text(strings.customNoteLabel) },
                         singleLine = true,
+                        trailingIcon = {
+                            if (customLabel.isNotEmpty()) {
+                                IconButton(onClick = { customLabel = "" }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Clear",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(
+                            textDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) TextDirection.ContentOrRtl else TextDirection.ContentOrLtr,
+                            textAlign = TextAlign.Start
+                        ),
                         shape = RoundedCornerShape(12.dp)
                     )
                 }
@@ -252,7 +405,7 @@ fun RecordingsLibraryScreen(
         )
     }
 
-    // Delete Confirmation Dialog
+    // Delete Individual Confirmation Dialog
     uiState.deleteConfirmRecording?.let { item ->
         AlertDialog(
             onDismissRequest = { viewModel.dismissDeleteDialog() },
@@ -276,6 +429,37 @@ fun RecordingsLibraryScreen(
             }
         )
     }
+
+    // Delete All Confirmation Dialog
+    if (uiState.showDeleteAllConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDeleteAllConfirmDialog() },
+            title = {
+                Text(
+                    text = strings.confirmDeleteAllTitle,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            text = {
+                Text(text = strings.confirmDeleteAllMessage)
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.confirmDeleteAllRecordings() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(text = strings.deleteAllRecordings, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissDeleteAllConfirmDialog() }) {
+                    Text(text = strings.cancel)
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -283,10 +467,13 @@ fun RecordingCardItem(
     recording: UserRecording,
     isPlaying: Boolean,
     isActive: Boolean,
-    positionMs: Long,
-    durationMs: Long,
-    onPlayClick: () -> Unit,
+    isSelected: Boolean = false,
+    isSelectionMode: Boolean = false,
+    currentPositionMs: Long,
+    totalDurationMs: Long,
+    onToggleSelect: () -> Unit = {},
     onSeek: (Long) -> Unit,
+    onPlayClick: () -> Unit,
     onShareClick: () -> Unit,
     onCopyClick: () -> Unit,
     onRenameClick: () -> Unit,
@@ -295,8 +482,11 @@ fun RecordingCardItem(
     val strings = LocalAppStrings.current
     var showMenu by remember { mutableStateOf(false) }
 
-    val totalDuration = if (durationMs > 0) durationMs else recording.durationMs
-    val elapsedSecs = recording.durationMs / 1000
+    val currentMins = (currentPositionMs / 1000) / 60
+    val currentSecs = (currentPositionMs / 1000) % 60
+    val formattedCurrent = String.format(Locale.getDefault(), "%02d:%02d", currentMins, currentSecs)
+
+    val elapsedSecs = (if (isActive && totalDurationMs > 0) totalDurationMs else recording.durationMs) / 1000
     val mins = elapsedSecs / 60
     val secs = elapsedSecs % 60
     val durationStr = String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
@@ -308,19 +498,29 @@ fun RecordingCardItem(
             .testTag("recording_item_${recording.id}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
+            containerColor = when {
+                isSelected -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)
+                isActive -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                else -> MaterialTheme.colorScheme.surface
+            }
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
+        Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Checkbox for Selection Mode
+                if (isSelectionMode || isSelected) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = { onToggleSelect() },
+                        modifier = Modifier.testTag("recording_checkbox_${recording.id}")
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+
                 // Play Button Icon
                 IconButton(
                     onClick = onPlayClick,
@@ -349,9 +549,9 @@ fun RecordingCardItem(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "$durationStr · $timeStr${if (recording.customLabel != null) " • ${recording.customLabel}" else ""}",
+                        text = if (isActive) "$formattedCurrent / $durationStr · $timeStr" else "$durationStr · $timeStr${if (recording.customLabel != null) " • ${recording.customLabel}" else ""}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
@@ -413,54 +613,38 @@ fun RecordingCardItem(
                 }
             }
 
-            // Audio Progress Bar Section (Visible when item is active or playing)
-            AnimatedVisibility(visible = isActive) {
-                Column(
+            // Audio Progress Bar (Interactive Slider for active audio)
+            if (isActive) {
+                Spacer(modifier = Modifier.height(4.dp))
+                val safeMax = if (totalDurationMs > 0) totalDurationMs.toFloat() else 1f
+                val safePos = currentPositionMs.coerceIn(0L, totalDurationMs).toFloat()
+
+                Slider(
+                    value = safePos,
+                    onValueChange = { onSeek(it.toLong()) },
+                    valueRange = 0f..safeMax,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp, start = 4.dp, end = 4.dp)
-                ) {
-                    val safeMax = if (totalDuration > 0) totalDuration.toFloat() else 1f
-                    val currentPosFloat = positionMs.coerceIn(0L, totalDuration).toFloat()
-
-                    Slider(
-                        value = currentPosFloat,
-                        onValueChange = { newPos -> onSeek(newPos.toLong()) },
-                        valueRange = 0f..safeMax,
-                        colors = SliderDefaults.colors(
-                            thumbColor = MaterialTheme.colorScheme.primary,
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(24.dp)
+                        .testTag("audio_progress_slider"),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.primaryContainer
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = formatTimeMs(positionMs),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = formatTimeMs(totalDuration),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                )
             }
         }
     }
 }
 
-private fun formatTimeMs(ms: Long): String {
-    val totalSecs = (ms / 1000).coerceAtLeast(0)
-    val mins = totalSecs / 60
-    val secs = totalSecs % 60
-    return String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
+@Composable
+private fun StatItem(
+    icon: String,
+    value: String,
+    label: String
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = "$icon $value", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

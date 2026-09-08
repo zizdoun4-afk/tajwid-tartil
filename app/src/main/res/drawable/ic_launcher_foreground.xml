@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:src="@mipmap/ic_launcher_img"
-    android:gravity="center" />
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Golden Star / Rosette Motif -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M54,22 L60,38 L76,32 L70,48 L86,54 L70,60 L76,76 L60,70 L54,86 L48,70 L32,76 L38,60 L22,54 L38,48 L32,32 L48,38 Z" />
+    <!-- Inner Book Silhouette -->
+    <path
+        android:fillColor="#0F382C"
+        android:pathData="M38,42 C44,40 50,43 54,45 C58,43 64,40 70,42 L70,66 C64,64 58,66 54,68 C50,66 44,64 38,66 Z" />
+    <!-- Book Spine & Details -->
+    <path
+        android:fillColor="#FBF9F1"
+        android:pathData="M53.2,46 L54.8,46 L54.8,67 L53.2,67 Z" />
+</vector>
