@@ -86,6 +86,16 @@ class FakeMemorizationDao : MemorizationDao {
     override suspend fun getWeeklyStats(sinceMillis: Long): List<MemorizationStatusEntity> {
         return store.values.filter { (it.lastReviewedAtEpochMillis ?: 0L) >= sinceMillis }
     }
+
+    override suspend fun getAllStatuses(): List<MemorizationStatusEntity> {
+        return store.values.toList()
+    }
+
+    override suspend fun upsertStatuses(entities: List<MemorizationStatusEntity>) {
+        entities.forEach {
+            store["${it.surahNumber}:${it.ayahNumber}"] = it
+        }
+    }
 }
 
 class MemorizationRepositoryTest {

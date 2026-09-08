@@ -47,6 +47,13 @@ data class HifzDashboardUiState(
     val juzProgressList: List<JuzMemorizationProgress> = emptyList(),
     val surahsMap: Map<Int, Surah> = emptyMap(),
     val versesReviewedWeek: Int = 0,
+    val versesReviewedMonth: Int = 0,
+    val selectedPeriodDays: Int = 7,
+    val lastReadSurahNumber: Int = 1,
+    val lastReadAyahNumber: Int = 1,
+    val totalRecordingsCount: Int = 0,
+    val tajwidLessonsCompleted: Int = 0,
+    val totalTajwidLessons: Int = 3,
     val versesStartedTotal: Int = 0,
     val versesLearningTotal: Int = 0,
     val versesInReviewTotal: Int = 0,
@@ -68,9 +75,17 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
     private val memorizationRepository = MemorizationRepository(db.memorizationDao())
     private val quranRepository = QuranRepository(db.quranCacheDao(), application)
     private val prefsRepository = UserPreferencesRepository(application)
+    private val recordingDao = db.recordingDao()
+    private val tajwidProgressDao = db.tajwidProgressDao()
+
+    private val _selectedPeriodDays = MutableStateFlow(7)
 
     private val _uiState = MutableStateFlow(HifzDashboardUiState())
     val uiState: StateFlow<HifzDashboardUiState> = _uiState.asStateFlow()
+
+    fun setPeriodDays(days: Int) {
+        _selectedPeriodDays.value = days
+    }
 
     init {
         loadData()
@@ -139,7 +154,11 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
                 prefsRepository.hifzReminderEnabled,
                 prefsRepository.hifzReminderHour,
                 prefsRepository.hifzReminderMinute,
-                prefsRepository.lastReadSurah
+                prefsRepository.lastReadSurah,
+                prefsRepository.lastReadAyahIndex,
+                recordingDao.getAllRecordings(),
+                tajwidProgressDao.getCompletedLessonsCountFlow(),
+                _selectedPeriodDays
             ) { args: Array<Any?> ->
                 @Suppress("UNCHECKED_CAST")
                 val due = args[0] as List<MemorizationStatusEntity>
@@ -152,6 +171,11 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
                 val reminderHour = args[5] as Int
                 val reminderMinute = args[6] as Int
                 val lastReadSurah = args[7] as? Int
+                val lastReadAyahIdx = args[8] as Int
+                @Suppress("UNCHECKED_CAST")
+                val allRecordings = args[9] as List<com.example.data.local.db.RecordingEntity>
+                val completedTajwidCount = args[10] as Int
+                val periodDays = args[11] as Int
 
                 val now = System.currentTimeMillis()
                 val startOfDay = getStartOfDayMillis()
@@ -217,6 +241,11 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
                     last >= (now - 7L * 24 * 60 * 60 * 1000)
                 }
 
+                val monthlyReviewed = allStatuses.count {
+                    val last = it.lastReviewedAtEpochMillis ?: 0L
+                    last >= (now - 30L * 24 * 60 * 60 * 1000)
+                }
+
                 // Calculate next unmemorized ayah to learn for NEW action
                 val targetSurahNum = lastReadSurah ?: 1
                 val targetSurah = surahMap[targetSurahNum] ?: surahMap[1]
@@ -255,6 +284,13 @@ class MemorizationViewModel(application: Application) : AndroidViewModel(applica
                     juzProgressList = juzProgress,
                     surahsMap = surahMap,
                     versesReviewedWeek = weeklyReviewed,
+                    versesReviewedMonth = monthlyReviewed,
+                    selectedPeriodDays = periodDays,
+                    lastReadSurahNumber = targetSurahNum,
+                    lastReadAyahNumber = lastReadAyahIdx + 1,
+                    totalRecordingsCount = allRecordings.size,
+                    tajwidLessonsCompleted = completedTajwidCount,
+                    totalTajwidLessons = 3,
                     versesStartedTotal = startedCount,
                     versesLearningTotal = learningCount,
                     versesInReviewTotal = inReviewCount,

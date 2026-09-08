@@ -1,5 +1,9 @@
 package com.example.ui.main
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.unit.dp
@@ -8,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -16,6 +22,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -71,6 +78,11 @@ fun MainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // Badge: show due reviews count on the Memorization tab
+    val memorizationViewModel: MemorizationViewModel = viewModel()
+    val memUiState by memorizationViewModel.uiState.collectAsState()
+    val dueCount = memUiState.dueReviews.size
+
     val isBottomBarVisible = currentRoute in BOTTOM_NAV_ITEMS.map { it.route }
 
     Scaffold(
@@ -104,11 +116,30 @@ fun MainScreen(
                                 }
                             },
                             icon = {
-                                Icon(
-                                    imageVector = item.icon,
-                                    contentDescription = labelText,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                if (item is BottomNavRoute.Memorization && dueCount > 0) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge {
+                                                Text(
+                                                    text = if (dueCount > 99) "99+" else "$dueCount",
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = item.icon,
+                                            contentDescription = labelText,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                } else {
+                                    Icon(
+                                        imageVector = item.icon,
+                                        contentDescription = labelText,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             },
                             label = { 
                                 Text(
@@ -133,7 +164,31 @@ fun MainScreen(
         NavHost(
             navController = navController,
             startDestination = BottomNavRoute.Surahs.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = {
+                fadeIn(animationSpec = tween(200)) + slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(250)
+                )
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(150)) + slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(200)
+                )
+            },
+            popEnterTransition = {
+                fadeIn(animationSpec = tween(200)) + slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(250)
+                )
+            },
+            popExitTransition = {
+                fadeOut(animationSpec = tween(150)) + slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(200)
+                )
+            }
         ) {
             composable(BottomNavRoute.Surahs.route) {
                 val surahViewModel: SurahListViewModel = viewModel()
@@ -169,7 +224,6 @@ fun MainScreen(
             }
 
             composable(BottomNavRoute.Memorization.route) {
-                val memorizationViewModel: MemorizationViewModel = viewModel()
                 MemorizationScreen(
                     viewModel = memorizationViewModel,
                     onStartTraining = { surahNum, ayahNum, initialStep ->
@@ -218,6 +272,9 @@ fun MainScreen(
                     viewModel = lessonDetailViewModel,
                     onBackClick = {
                         navController.popBackStack()
+                    },
+                    onOpenQuranExample = { surahNum, ayahNum ->
+                        navController.navigate("reader/$surahNum/${(ayahNum - 1).coerceAtLeast(0)}")
                     }
                 )
             }
@@ -341,6 +398,9 @@ fun MainScreen(
                             "training/$surahNum/$ayahNum"
                         }
                         navController.navigate(route)
+                    },
+                    onOpenReader = { surahNum, ayahIdx ->
+                        navController.navigate("reader/$surahNum/$ayahIdx")
                     },
                     viewModel = rafiqViewModel
                 )

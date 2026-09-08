@@ -2,6 +2,10 @@ package com.example.ui.memorization
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -75,6 +79,8 @@ import com.example.data.local.db.MemorizationStatusEntity
 import com.example.data.repository.SurahMemorizationProgress
 import com.example.domain.model.Surah
 import com.example.ui.components.ZelligeHeader
+import com.example.ui.i18n.AppStrings
+import com.example.ui.i18n.LocalAppLanguage
 import com.example.ui.i18n.LocalAppStrings
 import java.util.Locale
 
@@ -87,6 +93,8 @@ fun MemorizationScreen(
 ) {
     val context = LocalContext.current
     val strings = LocalAppStrings.current
+    val currentLang = LocalAppLanguage.current
+    val isArabic = currentLang.code == "ar"
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var showCustomTargetDialog by remember { mutableStateOf(false) }
@@ -396,6 +404,11 @@ fun MemorizationScreen(
                             onClick = { selectedTabIndex = 3 },
                             text = { Text(strings.hifzTabJuz, maxLines = 1, style = MaterialTheme.typography.labelMedium) }
                         )
+                        Tab(
+                            selected = selectedTabIndex == 4,
+                            onClick = { selectedTabIndex = 4 },
+                            text = { Text(strings.hifzTabJourney, maxLines = 1, style = MaterialTheme.typography.labelMedium) }
+                        )
                     }
                 }
 
@@ -465,6 +478,19 @@ fun MemorizationScreen(
                                         onStartTraining(metadata.startSurah, metadata.startAyah, null)
                                     }
                                 }
+                            )
+                        }
+                    }
+
+                    4 -> {
+                        // Professional Quran Journey (مسار رحلتي)
+                        item {
+                            QuranJourneyDashboard(
+                                uiState = uiState,
+                                strings = strings,
+                                isArabic = isArabic,
+                                onPeriodChange = { viewModel.setPeriodDays(it) },
+                                onOpenTraining = onStartTraining
                             )
                         }
                     }
@@ -714,8 +740,13 @@ fun DailyPlanCard(
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
+            val animatedProgress by animateFloatAsState(
+                targetValue = progress,
+                animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+                label = "dailyProgress"
+            )
             LinearProgressIndicator(
-                progress = { progress },
+                progress = { animatedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
@@ -1579,3 +1610,299 @@ fun EmptyStateCard(message: String) {
         }
     }
 }
+
+@Composable
+fun QuranJourneyDashboard(
+    uiState: HifzDashboardUiState,
+    strings: AppStrings,
+    isArabic: Boolean,
+    onPeriodChange: (Int) -> Unit,
+    onOpenTraining: (Int, Int, String?) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Visual Stage Progression (بدأت → أتعلم → أراجع → أتقن)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🌱", fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = strings.journeyTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    JourneyStageChip(
+                        title = strings.journeyStageStarted,
+                        count = uiState.versesStartedTotal,
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        textColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text("›", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
+                    JourneyStageChip(
+                        title = strings.journeyStageLearning,
+                        count = uiState.versesLearningTotal,
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text("›", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
+                    JourneyStageChip(
+                        title = strings.journeyStageReview,
+                        count = uiState.versesInReviewTotal,
+                        color = Color(0xFFFFF3E0),
+                        textColor = Color(0xFFE65100),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text("›", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline)
+                    JourneyStageChip(
+                        title = strings.journeyStageMastered,
+                        count = uiState.versesMemorizedTotal,
+                        color = Color(0xFFE8F5E9),
+                        textColor = Color(0xFF2E7D32),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // Period Switcher (7 days vs 30 days)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.padding(4.dp)
+            ) {
+                Row(modifier = Modifier.padding(4.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (uiState.selectedPeriodDays == 7) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        modifier = Modifier.clickable { onPeriodChange(7) }
+                    ) {
+                        Text(
+                            text = strings.journeyPeriod7Days,
+                            color = if (uiState.selectedPeriodDays == 7) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = if (uiState.selectedPeriodDays == 30) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        modifier = Modifier.clickable { onPeriodChange(30) }
+                    ) {
+                        Text(
+                            text = strings.journeyPeriod30Days,
+                            color = if (uiState.selectedPeriodDays == 30) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Card 1: Hifz & Spaced Review
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = strings.journeyHifzStatsTitle,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    JourneyStatTile(
+                        value = "${uiState.versesMemorizedTotal}",
+                        label = strings.hifzMemorizedVerses,
+                        modifier = Modifier.weight(1f)
+                    )
+                    val reviewedPeriodCount = if (uiState.selectedPeriodDays == 7) uiState.versesReviewedWeek else uiState.versesReviewedMonth
+                    JourneyStatTile(
+                        value = "$reviewedPeriodCount",
+                        label = if (uiState.selectedPeriodDays == 7) strings.journeyPeriod7Days else strings.journeyPeriod30Days,
+                        modifier = Modifier.weight(1f)
+                    )
+                    JourneyStatTile(
+                        value = "${uiState.currentStreakDays} 🔥",
+                        label = strings.hifzStreakLabel,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // Card 2: Quran Reading & Recordings
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = strings.journeyQuranStatsTitle,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    JourneyStatTile(
+                        value = "${uiState.lastReadSurahNumber}:${uiState.lastReadAyahNumber}",
+                        label = strings.continueReading,
+                        modifier = Modifier.weight(1f)
+                    )
+                    JourneyStatTile(
+                        value = "${uiState.totalRecordingsCount}",
+                        label = strings.journeyRecitationStatsTitle,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // Card 3: Tajwid Academy Progress
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = strings.journeyTajwidStatsTitle,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    JourneyStatTile(
+                        value = "${uiState.tajwidLessonsCompleted} / ${uiState.totalTajwidLessons}",
+                        label = strings.tajwidCompletedBadge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    val tajwidPercent = if (uiState.totalTajwidLessons > 0) {
+                        (uiState.tajwidLessonsCompleted * 100) / uiState.totalTajwidLessons
+                    } else 0
+                    JourneyStatTile(
+                        value = "$tajwidPercent%",
+                        label = strings.progressLabel,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun JourneyStageChip(
+    title: String,
+    count: Int,
+    color: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = color,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "$count",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                color = textColor,
+                maxLines = 1,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun JourneyStatTile(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
+    }
+}
+

@@ -383,6 +383,49 @@ interface AppStrings {
     val rafiqNextActionTitle: String
     val rafiqHomeCardTitle: String
     val rafiqHomeCardSubtitle: String
+
+    // Phase 3-10 Roadmap Strings
+    val tajwidPracticeInQuran: String
+
+    val hifzTabJourney: String
+    val journeyTitle: String
+    val journeyStageStarted: String
+    val journeyStageLearning: String
+    val journeyStageReview: String
+    val journeyStageMastered: String
+    val journeyPeriod7Days: String
+    val journeyPeriod30Days: String
+    val journeyQuranStatsTitle: String
+    val journeyHifzStatsTitle: String
+    val journeyTajwidStatsTitle: String
+    val journeyRecitationStatsTitle: String
+
+    val rafiqAskTitle: String
+    val rafiqQueryReviewToday: String
+    val rafiqQueryLearnToday: String
+    val rafiqQueryWeakAyahs: String
+    val rafiqQueryReadQuran: String
+    val rafiqQueryReviewQueue: String
+
+    val teacherShareTitle: String
+    val teacherSharePrefix: String
+    val teacherStatusPending: String
+    val teacherAddNoteLabel: String
+    val teacherSendRecitation: String
+
+    val backupSectionTitle: String
+    val backupDescription: String
+    val backupExportButton: String
+    val backupImportButton: String
+    val backupExportSuccess: String
+    val backupImportSuccess: String
+    val backupImportError: String
+
+    // Journey dashboard stat labels
+    val hifzMemorizedVerses: String
+    val hifzStreakLabel: String
+    val continueReading: String
+    val progressLabel: String
 }
 
 object ArabicAppStrings : AppStrings {
@@ -750,6 +793,48 @@ object ArabicAppStrings : AppStrings {
     override val rafiqNextActionTitle = "الخطوة المقترحة الآن:"
     override val rafiqHomeCardTitle = "رفيق اليوم • الورد اليومي"
     override val rafiqHomeCardSubtitle = "مراجعة وتثبيت موجه طوال ساعات اليوم"
+
+    // Phase 3-10 Roadmap Strings
+    override val tajwidPracticeInQuran = "تدرب في المصحف ▶"
+
+    override val hifzTabJourney = "مسار رحلتي"
+    override val journeyTitle = "مسار رحلتي القرآنية"
+    override val journeyStageStarted = "بدأت"
+    override val journeyStageLearning = "أتعلم"
+    override val journeyStageReview = "أراجع"
+    override val journeyStageMastered = "أتقن"
+    override val journeyPeriod7Days = "7 أيام"
+    override val journeyPeriod30Days = "30 يوماً"
+    override val journeyQuranStatsTitle = "القرآن والتلاوة"
+    override val journeyHifzStatsTitle = "الحفظ والمراجعة"
+    override val journeyTajwidStatsTitle = "أكاديمية التجويد"
+    override val journeyRecitationStatsTitle = "تلاواتي المسجلة"
+
+    override val rafiqAskTitle = "اسأل رفيق القرآن"
+    override val rafiqQueryReviewToday = "ماذا أراجع اليوم؟"
+    override val rafiqQueryLearnToday = "شنو خاصني نحفظ؟"
+    override val rafiqQueryWeakAyahs = "فين ضعيف؟"
+    override val rafiqQueryReadQuran = "بغيت نقرا شوية"
+    override val rafiqQueryReviewQueue = "بغيت نراجع الحفظ"
+
+    override val teacherShareTitle = "مشاركة مع المعلم"
+    override val teacherSharePrefix = "تلاوة للمراجعة والتقويم"
+    override val teacherStatusPending = "بانتظار تقويم المعلم"
+    override val teacherAddNoteLabel = "ملاحظة للمعلم..."
+    override val teacherSendRecitation = "إرسال التلاوة للمراجعة"
+
+    override val backupSectionTitle = "النسخ الاحتياطي والبيانات"
+    override val backupDescription = "تصدير أو استعادة تقدم الحفظ والإعدادات محلياً بدون سحابة لحماية الخصوصية."
+    override val backupExportButton = "تصدير نسخة احتياطية (JSON)"
+    override val backupImportButton = "استعادة نسخة احتياطية"
+    override val backupExportSuccess = "تم تصدير النسخة الاحتياطية بنجاح"
+    override val backupImportSuccess = "تمت استعادة البيانات بنجاح"
+    override val backupImportError = "تعذر استعادة البيانات من الملف"
+
+    override val hifzMemorizedVerses = "آيات محفوظة"
+    override val hifzStreakLabel = "أيام متتالية"
+    override val continueReading = "آخر موضع"
+    override val progressLabel = "التقدم"
 }
 
 object FrenchAppStrings : AppStrings {
@@ -1117,6 +1202,48 @@ object FrenchAppStrings : AppStrings {
     override val rafiqNextActionTitle = "Action recommandée :"
     override val rafiqHomeCardTitle = "Rafiq du Jour • Routine Coranique"
     override val rafiqHomeCardSubtitle = "Révisions et consolidation adaptées à votre journée"
+
+    // Phase 3-10 Roadmap Strings
+    override val tajwidPracticeInQuran = "Pratiquer dans le Coran ▶"
+
+    override val hifzTabJourney = "Mon Parcours"
+    override val journeyTitle = "Mon Parcours Coranique"
+    override val journeyStageStarted = "Démarré"
+    override val journeyStageLearning = "Apprentissage"
+    override val journeyStageReview = "Révision"
+    override val journeyStageMastered = "Maîtrisé"
+    override val journeyPeriod7Days = "7 jours"
+    override val journeyPeriod30Days = "30 jours"
+    override val journeyQuranStatsTitle = "Lecture & Récitation"
+    override val journeyHifzStatsTitle = "Mémorisation & Révision"
+    override val journeyTajwidStatsTitle = "Académie du Tajwid"
+    override val journeyRecitationStatsTitle = "Récitations enregistrées"
+
+    override val rafiqAskTitle = "Demander à Rafiq"
+    override val rafiqQueryReviewToday = "Que réviser aujourd'hui ?"
+    override val rafiqQueryLearnToday = "Que dois-je mémoriser ?"
+    override val rafiqQueryWeakAyahs = "Où sont mes versets fragiles ?"
+    override val rafiqQueryReadQuran = "Je veux lire le Coran"
+    override val rafiqQueryReviewQueue = "Lancer mes révisions"
+
+    override val teacherShareTitle = "Partager avec l'enseignant"
+    override val teacherSharePrefix = "Récitation pour évaluation de l'enseignant"
+    override val teacherStatusPending = "En attente d'avis de l'enseignant"
+    override val teacherAddNoteLabel = "Note pour l'enseignant..."
+    override val teacherSendRecitation = "Envoyer la récitation"
+
+    override val backupSectionTitle = "Sauvegarde & Données"
+    override val backupDescription = "Exportez ou restaurez vos progrès et paramètres en toute confidentialité sur votre appareil."
+    override val backupExportButton = "Exporter une sauvegarde (JSON)"
+    override val backupImportButton = "Restaurer une sauvegarde"
+    override val backupExportSuccess = "Sauvegarde exportée avec succès"
+    override val backupImportSuccess = "Données restaurées avec succès"
+    override val backupImportError = "Erreur lors de la restauration du fichier"
+
+    override val hifzMemorizedVerses = "Versets mémorisés"
+    override val hifzStreakLabel = "Jours consécutifs"
+    override val continueReading = "Dernière position"
+    override val progressLabel = "Progression"
 }
 
 fun getAppStrings(language: AppLanguage): AppStrings {

@@ -62,6 +62,7 @@ import com.example.ui.theme.QuranTextTypography
 fun TajwidLessonDetailScreen(
     viewModel: TajwidLessonDetailViewModel,
     onBackClick: () -> Unit,
+    onOpenQuranExample: ((surahNumber: Int, ayahNumber: Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -128,7 +129,8 @@ fun TajwidLessonDetailScreen(
                         isArabic = isArabic,
                         isPlaying = playerState is PlayerState.Playing,
                         playingUrl = uiState.playingExampleUrl,
-                        onPlayExample = { viewModel.playExampleAudio(it) }
+                        onPlayExample = { viewModel.playExampleAudio(it) },
+                        onOpenQuranExample = onOpenQuranExample
                     )
                 }
 
@@ -229,7 +231,8 @@ fun TajwidRuleCard(
     isArabic: Boolean,
     isPlaying: Boolean,
     playingUrl: String?,
-    onPlayExample: (TajwidExample) -> Unit
+    onPlayExample: (TajwidExample) -> Unit,
+    onOpenQuranExample: ((surahNumber: Int, ayahNumber: Int) -> Unit)? = null
 ) {
     val strings = LocalAppStrings.current
     val name = if (isArabic) rule.nameAr else rule.nameFr
@@ -285,7 +288,10 @@ fun TajwidRuleCard(
                         example = example,
                         isArabic = isArabic,
                         isPlaying = isPlaying && playingUrl == example.getAudioUrl(),
-                        onPlayClick = { onPlayExample(example) }
+                        onPlayClick = { onPlayExample(example) },
+                        onOpenQuranClick = if (onOpenQuranExample != null) {
+                            { onOpenQuranExample(example.surahNumber, example.ayahNumber) }
+                        } else null
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -299,7 +305,8 @@ fun TajwidExampleItem(
     example: TajwidExample,
     isArabic: Boolean,
     isPlaying: Boolean,
-    onPlayClick: () -> Unit
+    onPlayClick: () -> Unit,
+    onOpenQuranClick: (() -> Unit)? = null
 ) {
     val strings = LocalAppStrings.current
     val explanation = if (isArabic) example.explanationAr else example.explanationFr
@@ -344,20 +351,39 @@ fun TajwidExampleItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                OutlinedButton(
-                    onClick = onPlayClick,
-                    shape = RoundedCornerShape(10.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = if (isPlaying) strings.pauseButton else strings.tajwidListenExample,
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    if (onOpenQuranClick != null) {
+                        androidx.compose.material3.TextButton(
+                            onClick = onOpenQuranClick,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(
+                                text = strings.tajwidPracticeInQuran,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onPlayClick,
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (isPlaying) strings.pauseButton else strings.tajwidListenExample,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
                 }
             }
         }

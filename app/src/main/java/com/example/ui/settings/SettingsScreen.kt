@@ -272,6 +272,74 @@ fun SettingsScreen(
                 }
             }
 
+            // Backup & Data Restore Section (Offline-First)
+            val importFileLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+            ) { uri ->
+                uri?.let {
+                    try {
+                        val content = context.contentResolver.openInputStream(it)?.bufferedReader()?.use { reader -> reader.readText() }
+                        if (content != null) {
+                            viewModel.restoreBackup(content)
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "${strings.backupImportError}: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+
+            SettingsCategoryCard(
+                title = strings.backupSectionTitle,
+                icon = Icons.Default.CleaningServices
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = strings.backupDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                viewModel.exportBackup(context) { file ->
+                                    try {
+                                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                                            context,
+                                            "${context.packageName}.fileprovider",
+                                            file
+                                        )
+                                        val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                            type = "application/json"
+                                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(android.content.Intent.createChooser(shareIntent, strings.backupExportButton))
+                                    } catch (e: Exception) {
+                                        Toast.makeText(context, "${strings.backupExportSuccess}: ${file.name}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(strings.backupExportButton, style = MaterialTheme.typography.labelSmall)
+                        }
+
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { importFileLauncher.launch("*/*") },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(strings.backupImportButton, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(32.dp))
         }
     }

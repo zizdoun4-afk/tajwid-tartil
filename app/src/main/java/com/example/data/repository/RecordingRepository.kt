@@ -126,17 +126,30 @@ class RecordingRepository(
         val authority = "${context.packageName}.fileprovider"
         val contentUri: Uri = FileProvider.getUriForFile(context, authority, file)
 
+        val dateStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(recording.recordedAtEpochMillis))
+
+        val notePart = if (!recording.customLabel.isNullOrBlank()) "\n• ملاحظة: ${recording.customLabel}" else ""
+        val shareBody = """
+            |تلاوة للمراجعة والتقويم (رفيق القرآن):
+            |• السورة: ${recording.surahName} (${recording.surahNumber})
+            |• الآية: ${recording.ayahNumber}
+            |• القارئ: ${recording.reciterName}
+            |• التاريخ: $dateStr$notePart
+        """.trimMargin()
+
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "audio/m4a"
             putExtra(Intent.EXTRA_STREAM, contentUri)
+            putExtra(Intent.EXTRA_TEXT, shareBody)
             putExtra(
                 Intent.EXTRA_SUBJECT,
-                "Récitation ${recording.surahName} (Verset ${recording.ayahNumber}) - ${recording.reciterName}"
+                "تلاوة ${recording.surahName} (آية ${recording.ayahNumber}) - ${recording.reciterName}"
             )
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
-        val chooserIntent = Intent.createChooser(shareIntent, "Partager l'enregistrement")
+        val chooserIntent = Intent.createChooser(shareIntent, "مشاركة التلاوة مع المعلم / Partager")
         chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooserIntent)
     }

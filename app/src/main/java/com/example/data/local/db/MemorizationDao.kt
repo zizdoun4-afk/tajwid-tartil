@@ -59,4 +59,10 @@ interface MemorizationDao {
 
     @Query("SELECT * FROM memorization_status WHERE nextReviewDueEpochMillis > :windowStart AND nextReviewDueEpochMillis <= :windowEnd ORDER BY nextReviewDueEpochMillis ASC")
     fun getVersesApproachingDue(windowStart: Long, windowEnd: Long): Flow<List<MemorizationStatusEntity>>
+
+    @Query("SELECT * FROM memorization_status")
+    suspend fun getAllStatuses(): List<MemorizationStatusEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertStatuses(entities: List<MemorizationStatusEntity>)
 }

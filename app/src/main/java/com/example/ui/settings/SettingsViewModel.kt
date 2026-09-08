@@ -3,7 +3,10 @@ package com.example.ui.settings
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import com.example.data.local.db.AppDatabase
 import com.example.data.local.preferences.UserPreferencesRepository
+import com.example.data.repository.BackupRepository
 import com.example.domain.model.RecitationStyle
 import com.example.ui.i18n.AppLanguage
 import com.example.ui.theme.AVAILABLE_THEMES
@@ -31,6 +34,8 @@ data class SettingsUiState(
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val prefsRepository = UserPreferencesRepository(application)
+    private val database = AppDatabase.getInstance(application)
+    val backupRepository = BackupRepository(database, prefsRepository)
 
     private val _cacheSize = MutableStateFlow(0.0)
     private val _message = MutableStateFlow<String?>(null)
@@ -124,6 +129,30 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             }
             val mb = bytes / (1024.0 * 1024.0)
             _cacheSize.value = mb
+        }
+    }
+
+    fun exportBackup(context: Context, onFileReady: (File) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val file = backupRepository.exportBackupToFile(context)
+                _message.value = "Sauvegarde exportée: ${file.name}"
+                onFileReady(file)
+            } catch (e: Exception) {
+                _message.value = "Erreur d'export: ${e.localizedMessage}"
+            }
+        }
+    }
+
+    fun restoreBackup(jsonString: String) {
+        viewModelScope.launch {
+            val result = backupRepository.importBackupJson(jsonString)
+            if (result.isSuccess) {
+                val count = result.getOrDefault(0)
+                _message.value = "Restauration réussie ($count versets restaurés)"
+            } else {
+                _message.value = "Erreur de restauration: ${result.exceptionOrNull()?.localizedMessage}"
+            }
         }
     }
 

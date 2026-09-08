@@ -1,5 +1,6 @@
 package com.example.ui.companion
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,6 +47,7 @@ fun RafiqCompanionScreen(
     onBackClick: () -> Unit,
     onNavigateToTajwidLesson: ((String) -> Unit)? = null,
     onStartTraining: ((surah: Int, ayah: Int, initialStep: String?) -> Unit)? = null,
+    onOpenReader: ((surah: Int, ayahIndex: Int) -> Unit)? = null,
     viewModel: RafiqCompanionViewModel = viewModel()
 ) {
     var selectedTab by remember { mutableStateOf(RafiqTab.SMART_SESSION) }
@@ -56,6 +58,7 @@ fun RafiqCompanionScreen(
     val queueIndex by viewModel.currentQueueIndex.collectAsState()
     val dailyRoutine by viewModel.dailyRoutine.collectAsState()
     val nextActionSuggestion by viewModel.nextActionSuggestion.collectAsState()
+    val activeQueryResponse by viewModel.activeQueryResponse.collectAsState()
 
     val currentSurah by viewModel.currentSurahNumber.collectAsState()
     val currentAyah by viewModel.currentAyahNumber.collectAsState()
@@ -175,6 +178,41 @@ fun RafiqCompanionScreen(
                                 }
                             )
                         }
+
+                        // Interactive Rafiq Orchestrator Card (رفيق القرآن يجيبك)
+                        RafiqInteractiveQueryCard(
+                            strings = strings,
+                            currentLanguage = currentLanguage,
+                            response = activeQueryResponse,
+                            onQueryReviewToday = { viewModel.handleQueryReviewToday() },
+                            onQueryLearnToday = { viewModel.handleQueryLearnToday() },
+                            onQueryWeakAyahs = { viewModel.handleQueryWeakAyahs() },
+                            onQueryReadQuran = { viewModel.handleQueryReadQuran() },
+                            onQueryReviewQueue = { viewModel.handleQueryReviewQueue() },
+                            onDismissResponse = { viewModel.clearQueryResponse() },
+                            onActionClick = { resp ->
+                                when (resp.actionType) {
+                                    RafiqActionType.START_TRAINING -> {
+                                        if (onStartTraining != null) {
+                                            onStartTraining(resp.targetSurah, resp.targetAyah, null)
+                                        } else {
+                                            viewModel.selectAyah(resp.targetSurah, resp.targetAyah)
+                                        }
+                                    }
+                                    RafiqActionType.OPEN_READER -> {
+                                        onOpenReader?.invoke(resp.targetSurah, (resp.targetAyah - 1).coerceAtLeast(0))
+                                    }
+                                    RafiqActionType.LOAD_QUEUE -> {
+                                        if (onStartTraining != null) {
+                                            onStartTraining(resp.targetSurah, resp.targetAyah, null)
+                                        } else {
+                                            viewModel.selectAyah(resp.targetSurah, resp.targetAyah)
+                                        }
+                                    }
+                                    null -> {}
+                                }
+                            }
+                        )
 
                         // Spiritual motivation banner
                         Surface(
@@ -926,4 +964,209 @@ fun DailyCompanionRoutineCard(
         }
     }
 }
+
+@Composable
+fun RafiqInteractiveQueryCard(
+    strings: AppStrings,
+    currentLanguage: AppLanguage,
+    response: RafiqQueryResponse?,
+    onQueryReviewToday: () -> Unit,
+    onQueryLearnToday: () -> Unit,
+    onQueryWeakAyahs: () -> Unit,
+    onQueryReadQuran: () -> Unit,
+    onQueryReviewQueue: () -> Unit,
+    onDismissResponse: () -> Unit,
+    onActionClick: (RafiqQueryResponse) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("💬", fontSize = 20.sp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = strings.rafiqAskTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                if (response != null) {
+                    TextButton(onClick = onDismissResponse) {
+                        Text(strings.cancel, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+
+            // Quick Query Chips Flow
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onQueryReviewToday() }
+                ) {
+                    Text(
+                        text = strings.rafiqQueryReviewToday,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onQueryLearnToday() }
+                ) {
+                    Text(
+                        text = strings.rafiqQueryLearnToday,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onQueryWeakAyahs() }
+                ) {
+                    Text(
+                        text = strings.rafiqQueryWeakAyahs,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onQueryReadQuran() }
+                ) {
+                    Text(
+                        text = strings.rafiqQueryReadQuran,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onQueryReviewQueue() }
+                ) {
+                    Text(
+                        text = strings.rafiqQueryReviewQueue,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // Animated Response View
+            AnimatedVisibility(visible = response != null) {
+                response?.let { resp ->
+                    val title = when (currentLanguage) {
+                        AppLanguage.ARABIC -> resp.titleAr
+                        AppLanguage.FRENCH -> resp.titleFr
+                        AppLanguage.ENGLISH -> resp.titleEn
+                    }
+                    val details = when (currentLanguage) {
+                        AppLanguage.ARABIC -> resp.detailsAr
+                        AppLanguage.FRENCH -> resp.detailsFr
+                        AppLanguage.ENGLISH -> resp.detailsEn
+                    }
+                    val actionLabel = when (currentLanguage) {
+                        AppLanguage.ARABIC -> resp.actionLabelAr
+                        AppLanguage.FRENCH -> resp.actionLabelFr
+                        AppLanguage.ENGLISH -> resp.actionLabelEn
+                    }
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+
+                            Text(
+                                text = details,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            if (actionLabel != null && resp.actionType != null) {
+                                Button(
+                                    onClick = { onActionClick(resp) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(
+                                        text = actionLabel,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 

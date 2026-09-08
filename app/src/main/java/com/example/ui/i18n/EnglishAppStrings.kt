@@ -365,4 +365,46 @@ object EnglishAppStrings : AppStrings {
     override val rafiqNextActionTitle = "Recommended Step:"
     override val rafiqHomeCardTitle = "Daily Rafiq • Quran Habit"
     override val rafiqHomeCardSubtitle = "Adaptive reviews and reinforcement throughout your day"
+
+    // Phase 3-10 Roadmap Strings
+    override val tajwidPracticeInQuran = "Practice in Quran ▶"
+
+    override val hifzTabJourney = "My Journey"
+    override val journeyTitle = "My Quran Journey"
+    override val journeyStageStarted = "Started"
+    override val journeyStageLearning = "Learning"
+    override val journeyStageReview = "Reviewing"
+    override val journeyStageMastered = "Mastered"
+    override val journeyPeriod7Days = "7 Days"
+    override val journeyPeriod30Days = "30 Days"
+    override val journeyQuranStatsTitle = "Quran Reading & Recitation"
+    override val journeyHifzStatsTitle = "Memorization & Review"
+    override val journeyTajwidStatsTitle = "Tajwid Academy"
+    override val journeyRecitationStatsTitle = "Recorded Recitations"
+
+    override val rafiqAskTitle = "Ask Rafiq Al-Quran"
+    override val rafiqQueryReviewToday = "What should I review today?"
+    override val rafiqQueryLearnToday = "What to memorize today?"
+    override val rafiqQueryWeakAyahs = "Where are my weak verses?"
+    override val rafiqQueryReadQuran = "I want to read Quran"
+    override val rafiqQueryReviewQueue = "Start memorization review"
+
+    override val teacherShareTitle = "Share with Teacher"
+    override val teacherSharePrefix = "Recitation for Teacher Review"
+    override val teacherStatusPending = "Awaiting Teacher Feedback"
+    override val teacherAddNoteLabel = "Note for teacher..."
+    override val teacherSendRecitation = "Send Recitation for Review"
+
+    override val backupSectionTitle = "Backup & Data"
+    override val backupDescription = "Export or restore your memorization progress and settings locally for complete privacy."
+    override val backupExportButton = "Export Backup (JSON)"
+    override val backupImportButton = "Restore Backup"
+    override val backupExportSuccess = "Backup exported successfully"
+    override val backupImportSuccess = "Data restored successfully"
+    override val backupImportError = "Failed to restore data from file"
+
+    override val hifzMemorizedVerses = "Memorized verses"
+    override val hifzStreakLabel = "Day streak"
+    override val continueReading = "Last position"
+    override val progressLabel = "Progress"
 }

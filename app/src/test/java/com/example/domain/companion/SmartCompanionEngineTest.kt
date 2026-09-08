@@ -69,6 +69,10 @@ class FakeMemorizationDao : MemorizationDao {
         return items.filter { (it.lastReviewedAtEpochMillis ?: 0L) >= sinceMillis }
     }
 
+    override suspend fun getAllStatuses(): List<MemorizationStatusEntity> {
+        return items.toList()
+    }
+
     override fun getAllStatusesFlow(): Flow<List<MemorizationStatusEntity>> {
         return flowOf(items)
     }
@@ -90,6 +94,10 @@ class FakeMemorizationDao : MemorizationDao {
             val due = it.nextReviewDueEpochMillis ?: Long.MAX_VALUE
             due > windowStart && due <= windowEnd
         })
+    }
+
+    override suspend fun upsertStatuses(entities: List<MemorizationStatusEntity>) {
+        items.addAll(entities)
     }
 }
 
