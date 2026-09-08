@@ -5,7 +5,6 @@ import com.example.data.local.db.MemorizationStatusEntity
 import com.example.domain.model.MemorizationStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 data class SurahMemorizationProgress(
@@ -18,12 +17,6 @@ data class SurahMemorizationProgress(
     val percentage: Float
         get() = if (totalAyahs > 0) (memorizedCount.toFloat() / totalAyahs) * 100f else 0f
 }
-
-data class WeeklyMemorizationStats(
-    val versesReviewed: Int,
-    val versesMemorized: Int,
-    val totalPracticeTimeMs: Long
-)
 
 class MemorizationRepository(
     private val memorizationDao: MemorizationDao

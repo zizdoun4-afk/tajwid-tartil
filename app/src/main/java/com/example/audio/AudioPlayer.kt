@@ -54,6 +54,7 @@ class AudioPlayer(private val context: Context) {
     val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
 
     private var currentRemainingRepeats = 0
+    private var onCompleteListener: (() -> Unit)? = null
 
     private var progressJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Main)
@@ -86,6 +87,10 @@ class AudioPlayer(private val context: Context) {
     }
 
     fun play(dataSource: String, onComplete: (() -> Unit)? = null) {
+        if (onComplete != null) {
+            this.onCompleteListener = onComplete
+        }
+
         if (_currentSource.value == dataSource && mediaPlayer != null) {
             if (_playerState.value is PlayerState.Paused) {
                 mediaPlayer?.start()
@@ -141,7 +146,9 @@ class AudioPlayer(private val context: Context) {
                         _playerState.value = PlayerState.Idle
                         _positionMs.value = _durationMs.value
                         stopProgressTracker()
-                        onComplete?.invoke()
+                        val cb = onCompleteListener
+                        onCompleteListener = null
+                        cb?.invoke()
                     }
                 }
 
@@ -178,6 +185,9 @@ class AudioPlayer(private val context: Context) {
     }
 
     fun togglePlayPause(dataSource: String, onComplete: (() -> Unit)? = null) {
+        if (onComplete != null) {
+            this.onCompleteListener = onComplete
+        }
         if (_currentSource.value == dataSource) {
             when (_playerState.value) {
                 is PlayerState.Playing -> pause()

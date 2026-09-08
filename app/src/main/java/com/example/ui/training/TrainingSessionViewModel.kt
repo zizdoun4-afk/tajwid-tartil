@@ -37,6 +37,8 @@ data class TrainingSessionUiState(
     val surah: Surah? = null,
     val ayah: Ayah? = null,
     val recitationStyle: RecitationStyle = RecitationStyle.TARTIL,
+    val isStep1Completed: Boolean = false,
+    val isStep2Completed: Boolean = false,
     val isRecording: Boolean = false,
     val recordingDurationMs: Long = 0L,
     val userRecordingFile: File? = null,
@@ -109,7 +111,25 @@ class TrainingSessionViewModel(
                 else -> RepeatMode.OFF
             }
         )
-        audioPlayer.togglePlayPause(url)
+        audioPlayer.togglePlayPause(url) {
+            when (_uiState.value.currentStep) {
+                TrainingStep.LISTEN_3X -> {
+                    _uiState.value = _uiState.value.copy(isStep1Completed = true)
+                }
+                TrainingStep.ACCOMPANIED_READING -> {
+                    _uiState.value = _uiState.value.copy(isStep2Completed = true)
+                }
+                else -> {}
+            }
+        }
+    }
+
+    fun markStep1Completed() {
+        _uiState.value = _uiState.value.copy(isStep1Completed = true)
+    }
+
+    fun markStep2Completed() {
+        _uiState.value = _uiState.value.copy(isStep2Completed = true)
     }
 
     fun startRecording() {
@@ -147,13 +167,16 @@ class TrainingSessionViewModel(
 
     fun canProceedToNextStep(): Boolean {
         return when (_uiState.value.currentStep) {
-            TrainingStep.LISTEN_3X -> true
-            TrainingStep.ACCOMPANIED_READING -> true
+            TrainingStep.LISTEN_3X -> _uiState.value.isStep1Completed
+            TrainingStep.ACCOMPANIED_READING -> _uiState.value.isStep2Completed
             TrainingStep.SOLO_RECORDING -> {
                 val file = _uiState.value.userRecordingFile
                 file != null && file.exists()
             }
-            TrainingStep.PLAYBACK_REVIEW -> true
+            TrainingStep.PLAYBACK_REVIEW -> {
+                val file = _uiState.value.userRecordingFile
+                file != null && file.exists()
+            }
             TrainingStep.BLIND_TEST -> false
         }
     }

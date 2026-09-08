@@ -73,6 +73,11 @@ interface AppStrings {
     val continueTrainingButton: String
     val hifzVersesLearning: String
     val recordRequiredToProceed: String
+    val step1RequiredToProceed: String
+    val step2RequiredToProceed: String
+    val step1CompletedBadge: String
+    val step2CompletedBadge: String
+    val step2ReadingInProgress: String
 
     // Surah List Screen
     val surahSearchPlaceholder: String
@@ -296,6 +301,11 @@ object ArabicAppStrings : AppStrings {
     override val continueTrainingButton = "متابعة التدريب"
     override val hifzVersesLearning = "قيد الحفظ"
     override val recordRequiredToProceed = "يرجى تسجيل تلاوتك أولاً للمتابعة إلى الخطوة التالية."
+    override val step1RequiredToProceed = "يرجى الاستماع للتكرارات الثلاث كاملة للمتابعة."
+    override val step2RequiredToProceed = "يرجى إكمال التلاوة المصحوبة للمتابعة."
+    override val step1CompletedBadge = "✓ تم الاستماع ٣ مرات بنجاح"
+    override val step2CompletedBadge = "✓ تمت التلاوة المصحوبة بنجاح"
+    override val step2ReadingInProgress = "التلاوة جارية — رتّل بصوت مرتفع مع القارئ"
 
     override val surahSearchPlaceholder = "ابحث عن سورة (بالاسم أو الرقم)..."
     override val surahVersesCount = "%d آيات"
@@ -508,6 +518,11 @@ object FrenchAppStrings : AppStrings {
     override val continueTrainingButton = "Continuer"
     override val hifzVersesLearning = "En apprentissage"
     override val recordRequiredToProceed = "Veuillez enregistrer votre récitation avant de passer à l'étape suivante."
+    override val step1RequiredToProceed = "Veuillez écouter les 3 répétitions complètes pour continuer."
+    override val step2RequiredToProceed = "Veuillez effectuer la lecture accompagnée pour continuer."
+    override val step1CompletedBadge = "✓ Écoute 3x effectuée avec succès"
+    override val step2CompletedBadge = "✓ Lecture accompagnée effectuée"
+    override val step2ReadingInProgress = "Lecture en cours — Lisez à voix haute en synchronisation avec le récitateur"
 
     override val surahSearchPlaceholder = "Rechercher une sourate (nom ou numéro)..."
     override val surahVersesCount = "%d versets"

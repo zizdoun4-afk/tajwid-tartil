@@ -287,48 +287,104 @@ fun TrainingSessionScreen(
             // Step-specific Interactive Panel
             when (uiState.currentStep) {
                 TrainingStep.LISTEN_3X -> {
-                    Button(
-                        onClick = { viewModel.playReferenceAudio(repeatCount = 3) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        val isPlaying = playerState is PlayerState.Playing
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.Repeat,
-                            contentDescription = strings.listen3xButton
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isPlaying) strings.pauseButton else strings.listen3xButton,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Button(
+                            onClick = { viewModel.playReferenceAudio(repeatCount = 3) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            val isPlaying = playerState is PlayerState.Playing
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.Repeat,
+                                contentDescription = strings.listen3xButton
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isPlaying) strings.pauseButton else strings.listen3xButton,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        if (uiState.isStep1Completed) {
+                            Text(
+                                text = strings.step1CompletedBadge,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF2E7D32),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        } else {
+                            Text(
+                                text = strings.step1RequiredToProceed,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
                 TrainingStep.ACCOMPANIED_READING -> {
-                    Button(
-                        onClick = { viewModel.playReferenceAudio(repeatCount = 1) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        Button(
+                            onClick = { viewModel.playReferenceAudio(repeatCount = 1) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        ) {
+                            val isPlaying = playerState is PlayerState.Playing
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = strings.listenAccompaniedButton
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isPlaying) strings.pauseButton else strings.listenAccompaniedButton,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
                         val isPlaying = playerState is PlayerState.Playing
-                        Icon(
-                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = strings.listenAccompaniedButton
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isPlaying) strings.pauseButton else strings.listenAccompaniedButton,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (isPlaying) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            ) {
+                                Text(
+                                    text = strings.step2ReadingInProgress,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        } else if (uiState.isStep2Completed) {
+                            Text(
+                                text = strings.step2CompletedBadge,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF2E7D32),
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        } else {
+                            Text(
+                                text = strings.step2RequiredToProceed,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
@@ -550,7 +606,16 @@ fun TrainingSessionScreen(
                             if (canProceed) {
                                 viewModel.goToNextStep()
                             } else {
-                                Toast.makeText(context, strings.recordRequiredToProceed, Toast.LENGTH_SHORT).show()
+                                val msg = when (uiState.currentStep) {
+                                    TrainingStep.LISTEN_3X -> strings.step1RequiredToProceed
+                                    TrainingStep.ACCOMPANIED_READING -> strings.step2RequiredToProceed
+                                    TrainingStep.SOLO_RECORDING -> strings.recordRequiredToProceed
+                                    TrainingStep.PLAYBACK_REVIEW -> strings.recordRequiredToProceed
+                                    TrainingStep.BLIND_TEST -> ""
+                                }
+                                if (msg.isNotEmpty()) {
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
                             }
                         },
                         enabled = canProceed,
