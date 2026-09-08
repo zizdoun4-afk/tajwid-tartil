@@ -12,5 +12,6 @@ data class UserRecording(
     val durationMs: Long,
     val recordedAtEpochMillis: Long,
     val customLabel: String? = null,
-    val markers: List<SessionMarker>? = null
+    val markers: List<SessionMarker>? = null,
+    val isBest: Boolean = false
 )

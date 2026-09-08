@@ -153,7 +153,10 @@ fun MainScreen(
             composable(BottomNavRoute.Library.route) {
                 val recordingsViewModel: RecordingsLibraryViewModel = viewModel()
                 RecordingsLibraryScreen(
-                    viewModel = recordingsViewModel
+                    viewModel = recordingsViewModel,
+                    onOpenInReader = { surahNum, ayahIndex ->
+                        navController.navigate("reader/$surahNum/$ayahIndex")
+                    }
                 )
             }
 

@@ -10,6 +10,7 @@ import com.example.audio.QuranRecorderEngineImpl
 import com.example.audio.RepeatMode
 import com.example.audio.SessionResult
 import com.example.audio.SessionState
+import com.example.audio.TakeResult
 import com.example.data.local.db.AppDatabase
 import com.example.data.local.preferences.UserPreferencesRepository
 import com.example.data.repository.MemorizationRepository
@@ -52,6 +53,8 @@ data class AyahReaderUiState(
     val recordingElapsedMs: Long = 0L,
     val recordingAmplitude: Float = 0f,
     val recordedAyahMap: Map<Int, Boolean> = emptyMap(),
+    val currentAyahRecording: RecitationMeta? = null,
+    val reviewTakeResult: TakeResult? = null,
 
     // Memorization / Hifz State
     val memorizationStatusMap: Map<Int, MemorizationStatus> = emptyMap(),
@@ -78,7 +81,7 @@ data class AyahReaderUiState(
         }
 
     val isRecordingActive: Boolean
-        get() = isTaking || sessionState != SessionState.IDLE
+        get() = isTaking || sessionState != SessionState.IDLE || reviewTakeResult != null
 }
 
 class AyahReaderViewModel(
@@ -175,7 +178,12 @@ class AyahReaderViewModel(
         viewModelScope.launch {
             recitationsStore.recitationsFlow.collect {
                 val map = recitationsStore.recordedAyahMap(surahNumber)
-                _uiState.value = _uiState.value.copy(recordedAyahMap = map)
+                val currentAyah = currentAyahOrNull()
+                val currentRec = if (currentAyah != null) recitationsStore.findAyahRecording(surahNumber, currentAyah.numberInSurah) else null
+                _uiState.value = _uiState.value.copy(
+                    recordedAyahMap = map,
+                    currentAyahRecording = currentRec
+                )
             }
         }
     }
@@ -256,6 +264,8 @@ class AyahReaderViewModel(
         audioPlayer.stop()
     }
 
+    fun playAudio() = playReferenceAudio()
+
     fun playReferenceAudio() {
         val ayahs = _uiState.value.ayahs
         val index = _uiState.value.currentAyahIndex
@@ -308,7 +318,74 @@ class AyahReaderViewModel(
         }
     }
 
-    fun stopTakeAndSave() {
+    fun stopTake() {
+        viewModelScope.launch {
+            val result = quranRecorderEngine.stopTake()
+            if (result != null) {
+                _uiState.value = _uiState.value.copy(reviewTakeResult = result)
+            }
+        }
+    }
+
+    fun playReviewTake() {
+        val path = _uiState.value.reviewTakeResult?.filePath ?: return
+        audioPlayer.togglePlayPause(path)
+    }
+
+    fun playReviewModel() {
+        val currentAyah = currentAyahOrNull() ?: return
+        val url = _uiState.value.recitationStyle.buildAudioUrl(surahNumber, currentAyah.numberInSurah)
+        audioPlayer.togglePlayPause(url)
+    }
+
+    fun retake() {
+        audioPlayer.stop()
+        _uiState.value.reviewTakeResult?.let {
+            File(it.filePath).delete()
+        }
+        _uiState.value = _uiState.value.copy(reviewTakeResult = null)
+        startTake()
+    }
+
+    fun discardReviewTake() {
+        audioPlayer.stop()
+        _uiState.value.reviewTakeResult?.let {
+            File(it.filePath).delete()
+        }
+        _uiState.value = _uiState.value.copy(reviewTakeResult = null)
+    }
+
+    fun keepReviewTake(markAsBest: Boolean = false) {
+        audioPlayer.stop()
+        val result = _uiState.value.reviewTakeResult ?: return
+        val currentAyah = currentAyahOrNull() ?: return
+        val reciter = _uiState.value.reciterNameInput.ifBlank { "Mon Enregistrement" }
+        val surahName = _uiState.value.surah?.englishName ?: "Sourate $surahNumber"
+
+        viewModelScope.launch {
+            recitationsStore.saveAyahRecording(
+                tempPath = result.filePath,
+                sura = surahNumber,
+                surahName = surahName,
+                aya = currentAyah.numberInSurah,
+                riwaya = "hafs",
+                durationMs = result.durationMs,
+                reciterName = reciter,
+                isBest = markAsBest
+            )
+
+            updateCurrentAyahRecording()
+
+            _uiState.value = _uiState.value.copy(
+                reviewTakeResult = null,
+                successMessage = "Verset ${currentAyah.numberInSurah} enregistré avec succès !",
+                showAddToRevisionPrompt = true,
+                pendingRevisionAyah = currentAyah.numberInSurah
+            )
+        }
+    }
+
+    fun stopTakeAndSave(markAsBest: Boolean = false) {
         viewModelScope.launch {
             val result = quranRecorderEngine.stopTake()
             if (result != null) {
@@ -324,8 +401,11 @@ class AyahReaderViewModel(
                         aya = currentAyah.numberInSurah,
                         riwaya = "hafs",
                         durationMs = result.durationMs,
-                        reciterName = reciter
+                        reciterName = reciter,
+                        isBest = markAsBest
                     )
+
+                    updateCurrentAyahRecording()
 
                     // Prompt to add to revision (Hifz), non-intrusive hook
                     _uiState.value = _uiState.value.copy(
@@ -335,6 +415,39 @@ class AyahReaderViewModel(
                     )
                 }
             }
+        }
+    }
+
+    fun updateCurrentAyahRecording() {
+        val currentAyah = currentAyahOrNull()
+        val rec = if (currentAyah != null) recitationsStore.findAyahRecording(surahNumber, currentAyah.numberInSurah) else null
+        _uiState.value = _uiState.value.copy(currentAyahRecording = rec)
+    }
+
+    fun toggleBestCurrentRecording() {
+        val rec = _uiState.value.currentAyahRecording ?: return
+        val currentAyah = currentAyahOrNull() ?: return
+        viewModelScope.launch {
+            val idLong = rec.id.toLongOrNull() ?: return@launch
+            val entity = db.recordingDao().getRecordingById(idLong) ?: return@launch
+            val newBest = !entity.isBest
+            if (newBest) {
+                db.recordingDao().clearBestForAyah(surahNumber, currentAyah.numberInSurah)
+            }
+            db.recordingDao().updateIsBest(idLong, newBest)
+            updateCurrentAyahRecording()
+        }
+    }
+
+    fun deleteCurrentRecording() {
+        val rec = _uiState.value.currentAyahRecording ?: return
+        viewModelScope.launch {
+            audioPlayer.stop()
+            recitationsStore.deleteRecitation(rec.id)
+            updateCurrentAyahRecording()
+            _uiState.value = _uiState.value.copy(
+                successMessage = "Enregistrement supprimé"
+            )
         }
     }
 
@@ -473,12 +586,18 @@ class AyahReaderViewModel(
 
     fun confirmExitAndDiscard() {
         viewModelScope.launch {
+            _uiState.value.reviewTakeResult?.let {
+                File(it.filePath).delete()
+            }
             if (_uiState.value.recordWorkflowMode == RecordWorkflowMode.AYAH) {
                 quranRecorderEngine.discardTake()
             } else {
                 quranRecorderEngine.discardSession()
             }
-            _uiState.value = _uiState.value.copy(showExitGuardDialog = false)
+            _uiState.value = _uiState.value.copy(
+                reviewTakeResult = null,
+                showExitGuardDialog = false
+            )
         }
     }
 
@@ -502,7 +621,7 @@ class AyahReaderViewModel(
 
     fun playRecordedAyah(ayaNumber: Int) {
         val meta = recitationsStore.findAyahRecording(surahNumber, ayaNumber) ?: return
-        val audioFile = recitationsStore.getAudioFile(meta.id)
+        val audioFile = recitationsStore.getAudioFile(meta.filePath)
         if (audioFile.exists()) {
             audioPlayer.togglePlayPause(audioFile.absolutePath)
         }
@@ -514,27 +633,48 @@ class AyahReaderViewModel(
 
     fun goToNextAyah() {
         audioPlayer.stop()
+        _uiState.value.reviewTakeResult?.let { File(it.filePath).delete() }
         val count = _uiState.value.ayahs.size
         if (count > 0 && _uiState.value.currentAyahIndex < count - 1) {
             val newIndex = _uiState.value.currentAyahIndex + 1
-            _uiState.value = _uiState.value.copy(currentAyahIndex = newIndex)
+            val nextAyah = _uiState.value.ayahs[newIndex]
+            val rec = recitationsStore.findAyahRecording(surahNumber, nextAyah.numberInSurah)
+            _uiState.value = _uiState.value.copy(
+                currentAyahIndex = newIndex,
+                currentAyahRecording = rec,
+                reviewTakeResult = null
+            )
             viewModelScope.launch { prefsRepository.saveLastPosition(surahNumber, newIndex) }
         }
     }
 
     fun goToPrevAyah() {
         audioPlayer.stop()
+        _uiState.value.reviewTakeResult?.let { File(it.filePath).delete() }
         if (_uiState.value.currentAyahIndex > 0) {
             val newIndex = _uiState.value.currentAyahIndex - 1
-            _uiState.value = _uiState.value.copy(currentAyahIndex = newIndex)
+            val prevAyah = _uiState.value.ayahs[newIndex]
+            val rec = recitationsStore.findAyahRecording(surahNumber, prevAyah.numberInSurah)
+            _uiState.value = _uiState.value.copy(
+                currentAyahIndex = newIndex,
+                currentAyahRecording = rec,
+                reviewTakeResult = null
+            )
             viewModelScope.launch { prefsRepository.saveLastPosition(surahNumber, newIndex) }
         }
     }
 
     fun selectAyah(index: Int) {
         audioPlayer.stop()
+        _uiState.value.reviewTakeResult?.let { File(it.filePath).delete() }
         if (index in _uiState.value.ayahs.indices) {
-            _uiState.value = _uiState.value.copy(currentAyahIndex = index)
+            val targetAyah = _uiState.value.ayahs[index]
+            val rec = recitationsStore.findAyahRecording(surahNumber, targetAyah.numberInSurah)
+            _uiState.value = _uiState.value.copy(
+                currentAyahIndex = index,
+                currentAyahRecording = rec,
+                reviewTakeResult = null
+            )
             viewModelScope.launch { prefsRepository.saveLastPosition(surahNumber, index) }
         }
     }
@@ -549,6 +689,9 @@ class AyahReaderViewModel(
         super.onCleared()
         audioPlayer.release()
         cleanupScope.launch {
+            _uiState.value.reviewTakeResult?.let {
+                File(it.filePath).delete()
+            }
             quranRecorderEngine.discardTake()
             quranRecorderEngine.discardSession()
         }

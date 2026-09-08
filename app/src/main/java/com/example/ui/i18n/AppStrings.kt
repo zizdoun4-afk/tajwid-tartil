@@ -237,6 +237,20 @@ interface AppStrings {
     val confirmDeleteAllTitle: String
     val confirmDeleteAllMessage: String
     val clearFieldTooltip: String
+
+    // Phase 2: Review & Retakes & Comparison
+    val reviewTakeTitle: String
+    val reviewTakeSubtitle: String
+    val playTakeButton: String
+    val playModelButton: String
+    val retakeButton: String
+    val keepTakeButton: String
+    val keepAsBestButton: String
+    val bestRecordingBadge: String
+    val openInReaderButton: String
+    val compareHeaderTitle: String
+    val activeSourceModel: String
+    val activeSourceUser: String
 }
 
 object ArabicAppStrings : AppStrings {
@@ -461,6 +475,19 @@ object ArabicAppStrings : AppStrings {
     override val confirmDeleteAllTitle = "حذف جميع التسجيلات؟"
     override val confirmDeleteAllMessage = "هل أنت تأكد من إمكانية حذف جميع التسجيلات نهائياً من المكتبة؟ هذه العملية لا يمكن التراجع عنها."
     override val clearFieldTooltip = "مسح الحقل"
+
+    override val reviewTakeTitle = "مراجعة التسجيل"
+    override val reviewTakeSubtitle = "استمع وقارن تلاوتك قبل اعتمادها"
+    override val playTakeButton = "استماع لتسجيلي ▶"
+    override val playModelButton = "استماع للنموذج 🎧"
+    override val retakeButton = "إعادة التسجيل 🔄"
+    override val keepTakeButton = "اعتماد وحفظ ✓"
+    override val keepAsBestButton = "⭐ حفظ كأفضل تسجيل"
+    override val bestRecordingBadge = "⭐ أفضل تسجيل"
+    override val openInReaderButton = "فتح في المصحف 📖"
+    override val compareHeaderTitle = "مقارنة التلاوة مع القارئ المرجعي"
+    override val activeSourceModel = "النموذج المرجعي"
+    override val activeSourceUser = "تلاوتي المسجلة"
 }
 
 object FrenchAppStrings : AppStrings {
@@ -685,6 +712,19 @@ object FrenchAppStrings : AppStrings {
     override val confirmDeleteAllTitle = "Supprimer tous les enregistrements ?"
     override val confirmDeleteAllMessage = "Êtes-vous sûr de vouloir supprimer définitivement tous les enregistrements de la bibliothèque ? Cette action est irréversible."
     override val clearFieldTooltip = "Effacer le champ"
+
+    override val reviewTakeTitle = "Révision de la prise"
+    override val reviewTakeSubtitle = "Écoutez et comparez avant de valider"
+    override val playTakeButton = "Écouter ma prise ▶"
+    override val playModelButton = "Écouter le modèle 🎧"
+    override val retakeButton = "Recommencer 🔄"
+    override val keepTakeButton = "Conserver & Enregistrer ✓"
+    override val keepAsBestButton = "⭐ Définir comme meilleure prise"
+    override val bestRecordingBadge = "⭐ Meilleure prise"
+    override val openInReaderButton = "Ouvrir dans le lecteur 📖"
+    override val compareHeaderTitle = "Comparaison avec le récitateur référent"
+    override val activeSourceModel = "Récitateur référent"
+    override val activeSourceUser = "Ma récitation"
 }
 
 fun getAppStrings(language: AppLanguage): AppStrings {

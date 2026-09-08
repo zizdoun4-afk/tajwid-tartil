@@ -33,6 +33,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -81,6 +83,7 @@ import java.util.Locale
 @Composable
 fun RecordingsLibraryScreen(
     viewModel: RecordingsLibraryViewModel,
+    onOpenInReader: ((surahNumber: Int, ayahIndex: Int) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -338,6 +341,8 @@ fun RecordingsLibraryScreen(
                             onToggleSelect = { viewModel.toggleSelectRecording(recording.id) },
                             onSeek = { newPos -> viewModel.audioPlayer.seekTo(newPos) },
                             onPlayClick = { viewModel.playRecording(recording) },
+                            onToggleBest = { viewModel.toggleBestRecording(recording) },
+                            onOpenInReader = onOpenInReader?.let { cb -> { cb(recording.surahNumber, (recording.ayahNumber - 1).coerceAtLeast(0)) } },
                             onShareClick = { viewModel.shareRecording(recording) },
                             onCopyClick = { viewModel.copyToDownloads(recording) },
                             onRenameClick = { viewModel.showRenameDialog(recording) },
@@ -474,6 +479,8 @@ fun RecordingCardItem(
     onToggleSelect: () -> Unit = {},
     onSeek: (Long) -> Unit,
     onPlayClick: () -> Unit,
+    onToggleBest: () -> Unit,
+    onOpenInReader: (() -> Unit)? = null,
     onShareClick: () -> Unit,
     onCopyClick: () -> Unit,
     onRenameClick: () -> Unit,
@@ -542,17 +549,46 @@ fun RecordingCardItem(
 
                 // Info Column
                 Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "🎙 ${recording.surahName} (${recording.ayahNumber})",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        if (recording.isBest) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.tertiaryContainer
+                            ) {
+                                Text(
+                                    text = "⭐",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                    }
                     Text(
-                        text = "🎙 ${recording.surahName} (${recording.ayahNumber}) — ${recording.reciterName}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = if (isActive) "$formattedCurrent / $durationStr · $timeStr" else "$durationStr · $timeStr${if (recording.customLabel != null) " • ${recording.customLabel}" else ""}",
+                        text = "${recording.reciterName} • " + (if (isActive) "$formattedCurrent / $durationStr · $timeStr" else "$durationStr · $timeStr${if (recording.customLabel != null) " • ${recording.customLabel}" else ""}"),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+
+                // Open in Reader quick button
+                if (onOpenInReader != null) {
+                    IconButton(
+                        onClick = onOpenInReader,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = strings.openInReaderButton,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
 
                 // More Menu [⋮]
@@ -575,6 +611,24 @@ fun RecordingCardItem(
                             onClick = {
                                 showMenu = false
                                 onPlayClick()
+                            }
+                        )
+                        if (onOpenInReader != null) {
+                            DropdownMenuItem(
+                                text = { Text(strings.openInReaderButton) },
+                                leadingIcon = { Icon(Icons.Default.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                onClick = {
+                                    showMenu = false
+                                    onOpenInReader()
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(if (recording.isBest) "☆ Retirer de meilleure prise" else strings.keepAsBestButton) },
+                            leadingIcon = { Icon(if (recording.isBest) Icons.Default.Star else Icons.Default.StarBorder, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary) },
+                            onClick = {
+                                showMenu = false
+                                onToggleBest()
                             }
                         )
                         DropdownMenuItem(

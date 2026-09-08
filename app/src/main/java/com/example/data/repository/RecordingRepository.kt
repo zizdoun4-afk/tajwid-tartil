@@ -33,7 +33,8 @@ class RecordingRepository(
         surahName: String,
         ayahNumber: Int,
         durationMs: Long,
-        customLabel: String? = null
+        customLabel: String? = null,
+        isBest: Boolean = false
     ): UserRecording = withContext(Dispatchers.IO) {
         val dateFolderStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
         val recordingsDir = File(context.filesDir, "recordings/$dateFolderStr")
@@ -50,6 +51,10 @@ class RecordingRepository(
             tempFile.delete()
         }
 
+        if (isBest) {
+            recordingDao.clearBestForAyah(surahNumber, ayahNumber)
+        }
+
         val entity = RecordingEntity(
             reciterName = reciterName,
             surahNumber = surahNumber,
@@ -58,11 +63,36 @@ class RecordingRepository(
             filePath = destFile.absolutePath,
             durationMs = durationMs,
             recordedAtEpochMillis = timestamp,
-            customLabel = customLabel
+            customLabel = customLabel,
+            isBest = isBest
         )
 
         val newId = recordingDao.insertRecording(entity)
         entity.copy(id = newId).toDomain()
+    }
+
+    suspend fun toggleBestRecording(recording: UserRecording): Boolean = withContext(Dispatchers.IO) {
+        val newBest = !recording.isBest
+        if (newBest) {
+            recordingDao.clearBestForAyah(recording.surahNumber, recording.ayahNumber)
+        }
+        recordingDao.updateIsBest(recording.id, newBest)
+        newBest
+    }
+
+    suspend fun setBestRecording(id: Long, surahNumber: Int, ayahNumber: Int) = withContext(Dispatchers.IO) {
+        recordingDao.clearBestForAyah(surahNumber, ayahNumber)
+        recordingDao.updateIsBest(id, true)
+    }
+
+    suspend fun getBestOrLatestRecording(surahNumber: Int, ayahNumber: Int): UserRecording? = withContext(Dispatchers.IO) {
+        recordingDao.getRecordingForAyah(surahNumber, ayahNumber)?.toDomain()
+    }
+
+    fun getRecordingsForAyah(surahNumber: Int, ayahNumber: Int): Flow<List<UserRecording>> {
+        return recordingDao.getRecordingsForAyahFlow(surahNumber, ayahNumber).map { list ->
+            list.map { it.toDomain() }
+        }
     }
 
     suspend fun updateRecordingMeta(id: Long, reciterName: String, customLabel: String?) = withContext(Dispatchers.IO) {

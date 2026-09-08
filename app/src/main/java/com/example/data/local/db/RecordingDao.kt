@@ -26,9 +26,18 @@ interface RecordingDao {
     @Query("SELECT * FROM recordings WHERE surahNumber = :surahNumber ORDER BY recordedAtEpochMillis DESC")
     fun getRecordingsBySurah(surahNumber: Int): Flow<List<RecordingEntity>>
 
-    @Query("SELECT * FROM recordings WHERE surahNumber = :surahNumber AND ayahNumber = :ayahNumber ORDER BY recordedAtEpochMillis DESC LIMIT 1")
+    @Query("SELECT * FROM recordings WHERE surahNumber = :surahNumber AND ayahNumber = :ayahNumber ORDER BY isBest DESC, recordedAtEpochMillis DESC LIMIT 1")
     suspend fun getRecordingForAyah(surahNumber: Int, ayahNumber: Int): RecordingEntity?
 
     @Query("SELECT DISTINCT ayahNumber FROM recordings WHERE surahNumber = :surahNumber")
     fun getRecordedAyahNumbers(surahNumber: Int): Flow<List<Int>>
+
+    @Query("UPDATE recordings SET isBest = :isBest WHERE id = :id")
+    suspend fun updateIsBest(id: Long, isBest: Boolean)
+
+    @Query("UPDATE recordings SET isBest = 0 WHERE surahNumber = :surahNumber AND ayahNumber = :ayahNumber")
+    suspend fun clearBestForAyah(surahNumber: Int, ayahNumber: Int)
+
+    @Query("SELECT * FROM recordings WHERE surahNumber = :surahNumber AND ayahNumber = :ayahNumber ORDER BY isBest DESC, recordedAtEpochMillis DESC")
+    fun getRecordingsForAyahFlow(surahNumber: Int, ayahNumber: Int): Flow<List<RecordingEntity>>
 }

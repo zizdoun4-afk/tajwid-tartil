@@ -131,6 +131,13 @@ class RecordingsLibraryViewModel(application: Application) : AndroidViewModel(ap
         }
     }
 
+    fun toggleBestRecording(recording: UserRecording) {
+        viewModelScope.launch {
+            val isNowBest = recordingRepository.toggleBestRecording(recording)
+            _message.value = if (isNowBest) "Marqué comme meilleure prise ⭐" else "Meilleure prise retirée"
+        }
+    }
+
     fun showRenameDialog(recording: UserRecording) {
         _renameDialogRecording.value = recording
     }

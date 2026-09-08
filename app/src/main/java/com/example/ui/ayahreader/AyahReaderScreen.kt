@@ -101,6 +101,7 @@ fun AyahReaderScreen(
     val strings = LocalAppStrings.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val playerState by viewModel.audioPlayer.playerState.collectAsStateWithLifecycle()
+    val activeSource by viewModel.audioPlayer.currentSource.collectAsStateWithLifecycle()
     val playPosition by viewModel.audioPlayer.positionMs.collectAsStateWithLifecycle()
     val playDuration by viewModel.audioPlayer.durationMs.collectAsStateWithLifecycle()
 
@@ -708,7 +709,7 @@ fun AyahReaderScreen(
                                             }
 
                                             Button(
-                                                onClick = { viewModel.stopTakeAndSave() },
+                                                onClick = { viewModel.stopTake() },
                                                 colors = ButtonDefaults.buttonColors(
                                                     containerColor = MaterialTheme.colorScheme.error
                                                 ),
@@ -717,31 +718,314 @@ fun AyahReaderScreen(
                                             ) {
                                                 Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
                                                 Spacer(modifier = Modifier.width(4.dp))
-                                                Text(strings.finishAndNextButton, fontWeight = FontWeight.Bold)
+                                                Text(strings.stopRecording, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    } else if (uiState.reviewTakeResult != null) {
+                                        // REVIEW FLOW: Listen to Take, Listen to Model, Retake, Keep
+                                        val reviewResult = uiState.reviewTakeResult!!
+                                        val isReviewTakePlaying = activeSource == reviewResult.filePath && playerState is PlayerState.Playing
+                                        val modelUrl = uiState.recitationStyle.buildAudioUrl(viewModel.surahNumber, currentAyah.numberInSurah)
+                                        val isModelPlaying = activeSource == modelUrl && playerState is PlayerState.Playing
+                                        val durationSecs = (reviewResult.durationMs / 1000).coerceAtLeast(1)
+
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 4.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Text(
+                                                    text = strings.reviewTakeTitle,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = MaterialTheme.colorScheme.primaryContainer
+                                                ) {
+                                                    Text(
+                                                        text = "${durationSecs}s",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            Text(
+                                                text = strings.reviewTakeSubtitle,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
+                                            )
+
+                                            // Dual Playback Row: Listen to Take vs Listen to Model
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                // My Take Player
+                                                Button(
+                                                    onClick = { viewModel.playReviewTake() },
+                                                    shape = RoundedCornerShape(14.dp),
+                                                    colors = ButtonDefaults.buttonColors(
+                                                        containerColor = if (isReviewTakePlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                                                        contentColor = if (isReviewTakePlaying) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer
+                                                    ),
+                                                    modifier = Modifier.weight(1f).testTag("play_review_take_button")
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (isReviewTakePlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(strings.playTakeButton, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                                                }
+
+                                                // Reference Model Player
+                                                OutlinedButton(
+                                                    onClick = { viewModel.playReviewModel() },
+                                                    shape = RoundedCornerShape(14.dp),
+                                                    border = BorderStroke(1.dp, if (isModelPlaying) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline),
+                                                    modifier = Modifier.weight(1f).testTag("play_review_model_button")
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (isModelPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                        contentDescription = null,
+                                                        tint = if (isModelPlaying) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(
+                                                        text = strings.playModelButton,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        color = if (isModelPlaying) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(12.dp))
+
+                                            // Action Buttons: Retake, Discard, Keep as Best, Keep
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                OutlinedButton(
+                                                    onClick = { viewModel.discardReviewTake() },
+                                                    shape = RoundedCornerShape(14.dp),
+                                                    modifier = Modifier.weight(1f).testTag("discard_review_take_button")
+                                                ) {
+                                                    Text(strings.discardTakeButton, style = MaterialTheme.typography.labelMedium)
+                                                }
+
+                                                OutlinedButton(
+                                                    onClick = { viewModel.retake() },
+                                                    shape = RoundedCornerShape(14.dp),
+                                                    modifier = Modifier.weight(1f).testTag("retake_button")
+                                                ) {
+                                                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text(strings.retakeButton, style = MaterialTheme.typography.labelMedium)
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.height(8.dp))
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                OutlinedButton(
+                                                    onClick = { viewModel.keepReviewTake(markAsBest = true) },
+                                                    shape = RoundedCornerShape(14.dp),
+                                                    border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.tertiary),
+                                                    modifier = Modifier.weight(1f).testTag("keep_as_best_button")
+                                                ) {
+                                                    Text(
+                                                        text = strings.keepAsBestButton,
+                                                        color = MaterialTheme.colorScheme.tertiary,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+
+                                                Button(
+                                                    onClick = { viewModel.keepReviewTake(markAsBest = false) },
+                                                    shape = RoundedCornerShape(14.dp),
+                                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                                    modifier = Modifier.weight(1f).testTag("keep_take_button")
+                                                ) {
+                                                    Text(
+                                                        text = strings.keepTakeButton,
+                                                        color = MaterialTheme.colorScheme.onSecondary,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
                                             }
                                         }
                                     } else {
-                                        // If already recorded, offer direct playback option
-                                        if (isCurrentAyahRecorded) {
-                                            OutlinedButton(
-                                                onClick = { viewModel.playRecordedAyah(currentAyah.numberInSurah) },
-                                                shape = RoundedCornerShape(16.dp),
-                                                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.tertiary),
+                                        // A/B Comparison & Saved Recording Section (if recorded)
+                                        val savedRecording = uiState.currentAyahRecording
+                                        if (savedRecording != null) {
+                                            val isUserPlaying = activeSource == savedRecording.filePath && playerState is PlayerState.Playing
+                                            val modelUrl = uiState.recitationStyle.buildAudioUrl(viewModel.surahNumber, currentAyah.numberInSurah)
+                                            val isModelPlaying = activeSource == modelUrl && playerState is PlayerState.Playing
+
+                                            Card(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .padding(bottom = 10.dp)
+                                                    .padding(bottom = 12.dp),
+                                                shape = RoundedCornerShape(16.dp),
+                                                colors = CardDefaults.cardColors(
+                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                                ),
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.PlayArrow,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.tertiary
-                                                )
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text(
-                                                    text = String.format(strings.listenMyRecitationFormat, currentAyah.numberInSurah),
-                                                    color = MaterialTheme.colorScheme.tertiary,
-                                                    fontWeight = FontWeight.Bold
-                                                )
+                                                Column(modifier = Modifier.padding(12.dp)) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Text(
+                                                            text = strings.compareHeaderTitle,
+                                                            style = MaterialTheme.typography.titleSmall,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = MaterialTheme.colorScheme.primary
+                                                        )
+
+                                                        if (savedRecording.isBest) {
+                                                            Surface(
+                                                                shape = RoundedCornerShape(8.dp),
+                                                                color = MaterialTheme.colorScheme.tertiaryContainer
+                                                            ) {
+                                                                Text(
+                                                                    text = strings.bestRecordingBadge,
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+
+                                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                                    // Side-by-side Comparison Row
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        // Reference Model Column
+                                                        Surface(
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .clip(RoundedCornerShape(12.dp))
+                                                                .clickable { viewModel.playAudio() },
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            color = if (isModelPlaying) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                                                            border = BorderStroke(1.dp, if (isModelPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(8.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = if (isModelPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                                    contentDescription = null,
+                                                                    tint = MaterialTheme.colorScheme.primary,
+                                                                    modifier = Modifier.size(24.dp)
+                                                                )
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Column {
+                                                                    Text(
+                                                                        text = strings.activeSourceModel,
+                                                                        style = MaterialTheme.typography.labelMedium,
+                                                                        fontWeight = FontWeight.Bold
+                                                                    )
+                                                                    Text(
+                                                                        text = if (isModelPlaying) strings.referencePlaying else "Audio",
+                                                                        style = MaterialTheme.typography.labelSmall,
+                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+
+                                                        // User Recording Column
+                                                        Surface(
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .clip(RoundedCornerShape(12.dp))
+                                                                .clickable { viewModel.playRecordedAyah(currentAyah.numberInSurah) },
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            color = if (isUserPlaying) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                                                            border = BorderStroke(1.dp, if (isUserPlaying) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(8.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = if (isUserPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                                    contentDescription = null,
+                                                                    tint = MaterialTheme.colorScheme.secondary,
+                                                                    modifier = Modifier.size(24.dp)
+                                                                )
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                Column {
+                                                                    Text(
+                                                                        text = strings.activeSourceUser,
+                                                                        style = MaterialTheme.typography.labelMedium,
+                                                                        fontWeight = FontWeight.Bold
+                                                                    )
+                                                                    val secs = savedRecording.durationMs / 1000
+                                                                    Text(
+                                                                        text = "${secs}s • ${savedRecording.reciterName}",
+                                                                        style = MaterialTheme.typography.labelSmall,
+                                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+
+                                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                                    // Best Toggle & Delete row
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.End,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        TextButton(onClick = { viewModel.toggleBestCurrentRecording() }) {
+                                                            Text(
+                                                                text = if (savedRecording.isBest) "⭐ Meilleure prise" else "☆ Marquer meilleure",
+                                                                style = MaterialTheme.typography.labelSmall
+                                                            )
+                                                        }
+                                                        Spacer(modifier = Modifier.width(4.dp))
+                                                        TextButton(
+                                                            onClick = { viewModel.deleteCurrentRecording() },
+                                                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                                                        ) {
+                                                            Text(strings.actionDelete, style = MaterialTheme.typography.labelSmall)
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
 
@@ -795,7 +1079,7 @@ fun AyahReaderScreen(
                                                                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
                                                                     viewModel.startTake()
                                                                     tryAwaitRelease()
-                                                                    viewModel.stopTakeAndSave()
+                                                                    viewModel.stopTake()
                                                                 } else {
                                                                     permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                                                 }

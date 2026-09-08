@@ -16,7 +16,8 @@ data class RecordingEntity(
     val durationMs: Long,
     val recordedAtEpochMillis: Long,
     val customLabel: String? = null,
-    val markers: List<SessionMarker>? = null
+    val markers: List<SessionMarker>? = null,
+    val isBest: Boolean = false
 ) {
     fun toDomain(): UserRecording = UserRecording(
         id = id,
@@ -28,7 +29,8 @@ data class RecordingEntity(
         durationMs = durationMs,
         recordedAtEpochMillis = recordedAtEpochMillis,
         customLabel = customLabel,
-        markers = markers
+        markers = markers,
+        isBest = isBest
     )
 
     companion object {
@@ -42,7 +44,8 @@ data class RecordingEntity(
             durationMs = domain.durationMs,
             recordedAtEpochMillis = domain.recordedAtEpochMillis,
             customLabel = domain.customLabel,
-            markers = domain.markers
+            markers = domain.markers,
+            isBest = domain.isBest
         )
     }
 }

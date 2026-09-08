@@ -38,7 +38,8 @@ data class RecitationMeta(
     val noteText: String? = null,
     val hasVoiceNote: Boolean = false,
     val reciterName: String = "Mon Enregistrement",
-    val filePath: String = ""
+    val filePath: String = "",
+    val isBest: Boolean = false
 )
 
 /**
@@ -88,7 +89,8 @@ class RecitationsStore(
                     markers = entity.markers,
                     noteText = entity.customLabel,
                     reciterName = entity.reciterName,
-                    filePath = entity.filePath
+                    filePath = entity.filePath,
+                    isBest = entity.isBest
                 )
             }
         }.launchIn(scope)
@@ -161,7 +163,8 @@ class RecitationsStore(
         aya: Int,
         riwaya: String = "hafs",
         durationMs: Long,
-        reciterName: String = "Mon Enregistrement"
+        reciterName: String = "Mon Enregistrement",
+        isBest: Boolean = false
     ): RecitationMeta = withContext(Dispatchers.IO) {
         ensureDirs()
         val tempFile = File(tempPath)
@@ -173,6 +176,10 @@ class RecitationsStore(
             tempFile.delete()
         }
 
+        if (isBest) {
+            recordingDao.clearBestForAyah(sura, aya)
+        }
+
         val entity = RecordingEntity(
             reciterName = reciterName,
             surahNumber = sura,
@@ -182,7 +189,8 @@ class RecitationsStore(
             durationMs = durationMs,
             recordedAtEpochMillis = System.currentTimeMillis(),
             customLabel = "Take Ayah $aya",
-            markers = null
+            markers = null,
+            isBest = isBest
         )
 
         val insertedId = recordingDao.insertRecording(entity)
@@ -197,7 +205,8 @@ class RecitationsStore(
             durationMs = durationMs,
             createdAt = getCurrentIsoDate(),
             reciterName = reciterName,
-            filePath = destFile.absolutePath
+            filePath = destFile.absolutePath,
+            isBest = isBest
         )
     }
 
