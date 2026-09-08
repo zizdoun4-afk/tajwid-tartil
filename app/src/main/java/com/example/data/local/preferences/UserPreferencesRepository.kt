@@ -106,6 +106,12 @@ class UserPreferencesRepository(private val context: Context) {
         }
     }
 
+    suspend fun setBookmarkedAyahs(bookmarks: Set<String>) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.BOOKMARKS] = bookmarks
+        }
+    }
+
     suspend fun toggleBookmark(surahNumber: Int, ayahNumber: Int): Boolean {
         var isAdded = false
         val keyStr = "$surahNumber:$ayahNumber"

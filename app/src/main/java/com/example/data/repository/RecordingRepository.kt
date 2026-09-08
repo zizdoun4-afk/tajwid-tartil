@@ -1,9 +1,12 @@
 package com.example.data.repository
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
+import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import com.example.data.local.db.RecordingDao
 import com.example.data.local.db.RecordingEntity
@@ -159,16 +162,38 @@ class RecordingRepository(
             val srcFile = File(recording.filePath)
             if (!srcFile.exists()) return@withContext false
 
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!downloadsDir.exists()) {
-                downloadsDir.mkdirs()
-            }
-
             val fileName = "Tajwid_${recording.surahNumber}_${recording.ayahNumber}_${recording.reciterName.replace(" ", "_")}.m4a"
-            val destFile = File(downloadsDir, fileName)
 
-            srcFile.copyTo(destFile, overwrite = true)
-            true
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val resolver = context.contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, "audio/mp4")
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                    ?: return@withContext false
+
+                resolver.openOutputStream(uri)?.use { out ->
+                    srcFile.inputStream().use { input -> input.copyTo(out) }
+                } ?: return@withContext false
+
+                contentValues.clear()
+                contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(uri, contentValues, null, null)
+
+                true
+            } else {
+                @Suppress("DEPRECATION")
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                if (!downloadsDir.exists()) {
+                    downloadsDir.mkdirs()
+                }
+
+                val destFile = File(downloadsDir, fileName)
+                srcFile.copyTo(destFile, overwrite = true)
+                true
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             false

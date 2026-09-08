@@ -135,6 +135,14 @@ class BackupRepository(
                 if (settingsObj.has("selectedThemeId")) {
                     preferencesRepository.setSelectedThemeId(settingsObj.getString("selectedThemeId"))
                 }
+                if (settingsObj.has("bookmarks")) {
+                    val bookmarksArray = settingsObj.getJSONArray("bookmarks")
+                    val restoredBookmarks = mutableListOf<String>()
+                    for (i in 0 until bookmarksArray.length()) {
+                        restoredBookmarks.add(bookmarksArray.getString(i))
+                    }
+                    preferencesRepository.setBookmarkedAyahs(restoredBookmarks.toSet())
+                }
             }
 
             Result.success(restoredList.size)
